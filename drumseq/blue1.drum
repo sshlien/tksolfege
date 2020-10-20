@@ -1,0 +1,10 @@
+ndrums 3
+drum(1) 36
+drum(2) 38
+drum(3) 57
+drumseq(1) {1 1 0 0  1 0 0 0}
+drumseq(2) {0 0 1 0  0 0 1 0}
+drumseq(3) {1 0 1 0  1 0 1 0}
+drumresolution 4
+drumduration 180
+

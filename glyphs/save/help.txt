@@ -1,0 +1,23 @@
+yaps created the glyph.eps file using a scale factor of 0.5
+and margins 150.
+
+The glyph.eps file was edited removing staff, clefs etc.
+
+The glyph.eps file was imported into gimp and selected
+area was copied into a new image and saved as a gif
+file glyph.gif.
+
+Using Kolourpaint the rectangles enclosing each note
+combination was determined and recorded into the
+file makeglyphfiles.tcl.
+
+makeglyphfiles was executed under wish.
+
+Due to a small mishap the rest for zGGG.gif did
+not appear in glyph.gif. The zGGG.gif file was
+made manually by recreating Out.eps and converting
+it to a glyph. We cannot replace glyph.gif without
+having to recompute all the enclosing rectangles.
+
+
+

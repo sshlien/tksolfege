@@ -1,0 +1,74 @@
+Songs are stored in the array called tunes. The name
+of the associated interval is specified by the names, minor2nd,
+major2nd, minor3rd,.. perfect4th,...octave etc followed by either
+a comma and either asc or des (for ascending or descending
+sequence).
+
+For example to specify the tune for the major2nd descending interval
+you would put the following statement.
+
+set tunes(major2nd,des) {96 {12 12 12 12 24 24 48} {0 -2 -3 -2 0 1 0}}
+
+The lists enclosed by the braces contains the tempo, the rhythm
+sequence and note sequence.
+
+In this example, a tempo of 96 quarter notes per minute was
+specified.
+
+The rhythm list {12 12 ... 48} lists the temporal value of each
+note. Each quarter note has a temporal value of 24 units. Half
+notes is 48, eigth notes 12, and etc.
+
+
+Pitches in the pitch list are specified in semitone units relative
+to the first note which should alway be zero. Thus -2 is the note one 
+whole tone below the first note.
+
+Tksolfege has the following tunes built-in.
+
+	#A Hard Days Night -Beatles
+set tunes(minor2nd,asc) {108 {12 12 12 48 48} {0 1 0 3 3}}
+	#Fur Elise - Beethoven
+set tunes(minor2nd,des) {120 {12 12 12 12 12 12 12} {0 -1 0 -1 0 -4 -2}}
+	#Silent Night - Christmas Carol
+set tunes(major2nd,asc) {60 {18 6 12 24} {0 2 0 -3}}
+	#Mary Had a Little Lamb - Nursery Rhyme
+set tunes(major2nd,des) {80 {24 24 24 24 24 24 48} {0 -2 -4 -2 0 0 0}}
+	#Greensleeves
+set tunes(minor3rd,asc) {110 {24 48 24 36 12 24 48} {0 3 5 7 8 7 5}}
+	#Star Spangled Banner - U.S.A. Anthem
+set tunes(minor3rd,des) {160 {36 12 48 48 48 48} {0 -3 -7 -3 0 5}}
+	#When the Saints Come Marching In
+set tunes(major3rd,asc) {120 {24 24 24 96} {0 4 5 7}}
+	#Summer Time - Gershwin
+set tunes(major3rd,des) {120 {24 24 96} {0 -4 0}}
+	#Here Comes the Bride
+set tunes(perfect4th,asc) {160 {24 24 12 36} {0 5 5 5}}
+	#Oh Come All You Faithful
+set tunes(perfect4th,des) {160 {48 24 24  48 48} {0 -5 0 2 -5}}
+	#Am I Evil  - Heavy Metal
+set tunes(tritone,asc) {120 {24 24 24 24 24 24 24 24} {0 6 5 13 12 18 17 25}}
+	#Twinkle Twinkle Little Star
+set tunes(perfect5th,asc) {160 {24 24 24 24 24 24 48} {0 0 7 7 9 9 7}}
+	#The Flintstones theme
+set tunes(perfect5th,des) {120 {36 60 48 12 12 12 12 36 48} {0 -7 z -7 -5 -4 -7 0 -7}}
+	#Go Down Moses
+set tunes(minor6th,asc) {120 {24 24 24 24 24 12 36 96} {0 8 8 7 7 8 8 5}}
+	#Please Don't Talk About Me When I'm Gone
+set tunes(minor6th,des) {144 {24 24 24 18 6 24 48 24} {0 -8 -5 0 -1 -1 -8 -5}}
+	#My Bonnie Lies Over the Ocean
+set tunes(major6th,asc) {120 {24 24 24 24 24 24 48} {0 9 7 5 7 5 2}}
+	#Over There
+set tunes(major6th,des) {120 {12 1 48 12 12 48} {0 -9 -4 0 -9 -4}}
+	#Somewhere - West Side Story
+set tunes(minor7th,asc) {60 {24 24 18 6 24} {0 10 9 5 2}}
+	#American in Paris - George Gershwin
+set tunes(minor7th,des) {90 {12 12 24 12 12 24} {0 -10 -8 0 -10 -8}}
+	#Fantasy Island theme
+set tunes(major7th,asc) {80 {12 18 6 36 12} { 0 11 12 9 8}}
+	#Somewhere over the Rainbow
+set tunes(octave,asc) {120 {48 48 24 12 12 24 24} {0 12 11 7 9 11 12}}
+	#Willow Weep for Me - Ann Ronell 1932
+set tunes(octave,des) {80 {24 12 12 12 12 24} {0 -12 z -10 -7 -10}}
+
+

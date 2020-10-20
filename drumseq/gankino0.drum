@@ -1,0 +1,5 @@
+ndrums 1
+drum(1) 37 
+drumseq(1) {1 0 1 0 1 0 1 1 0 1 0 }
+drumresolution 11
+drumduration 150
