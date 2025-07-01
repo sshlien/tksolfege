@@ -17,7 +17,7 @@ package require Tk
 
 # tksolfege.tcl: a program for music ear training
 
-# Copyright (C) 2005-2020 Seymour Shlien
+# Copyright (C) 2005-2025 Seymour Shlien
 
 
 # This program is free software; you can redistribute it and/or modify
@@ -37,9 +37,45 @@ package require Tk
 # Original page:
 #      http://ifdo.pugmarks.com/~seymour/tksolfege
 
+# Table of Contents
 
-
-
+# Part 1.0  lang array
+# Part 2.0  setpath, and checks
+# Part 3.0  muzic namespace
+# Part 4.0  definitions of notes, chords, modes, intervals, ...
+# Part 5.0  initialization and ini file support
+# Part 6.0  lessons initializations
+# Part 7.0  random supports
+# Part 8.0  user interface support buttons, menus etc
+# Part 9.0  setup drums, figured bass, chords
+# Part 10.0 exercise interface
+# Part 11.0 Keysig support
+# Part 12.0 Keysig support
+# Part 13.0 Configuration support
+# Part 14.0 lesson selection
+# Part 15.0 make lesson
+# Part 16.0 stats support 
+# Part 17.0 instrument button
+# Part 18.0 pick chord, scale, diatonic chord, chromatic chord
+# Part 19.0 tests
+# Part 20.0 interval test
+# Part 21.0 play function
+# Part 22.0 repeat
+# Part 23.0 confusion matrix support
+# Part 24.0 verification
+# Part 25.0 reveal answer
+# Part 26.0 rhythm support
+# Part 27.0 melody dictation
+# Part 28.0 draw notation 
+# Part 29.0 Play support
+# Part 30.0 draw chord
+# Part 31.0 chord support
+# Part 32.0 start up
+# Part 33.0 verification continued
+# Part 34.0 key signature support
+# Part 35.0 grand staff
+# Part 36.0 advance settings
+# Part 37.0 drum support
 
 
 set error_return [catch {package require starkit} errmsg]
@@ -57,11 +93,11 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.068 2020-10-19"
+set tksolfegeversion "1.69 2025-06-30"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
-
+# Part 1.0 lang array
 
 # english texts for tksolfege
 array set lang {
@@ -199,6 +235,7 @@ http://ifdo.ca/~seymour/tksolfege\n\n\
 
 set keysf 0
 
+# Part 2.0 setpath, and checks
 
 
 proc setpath {path_var} {
@@ -273,6 +310,7 @@ if {$starkitversion == 1} {
      }
   } else {
  
+# Part 3.0 muzic namespace
 # link with fluidsynth
 namespace eval muzic {
 
@@ -295,6 +333,7 @@ namespace eval muzic {
    namespace export playnote
    proc playnote {chanl pitch velocity duration} {
    variable midihandle
+   #puts "playnote $pitch"
    set s "noteon $chanl $pitch $velocity"
    puts $midihandle $s
    set s "noteoff $chanl $pitch" 
@@ -302,6 +341,22 @@ namespace eval muzic {
    puts $midihandle $s
    flush $midihandle
    }
+
+   namespace export playchord
+   proc playchord {chanl pitchlist velocity duration} {
+   variable midihandle
+   foreach pitch $pitchlist {
+     set s "noteon $chanl $pitch $velocity"
+     puts $midihandle $s
+     }
+   after $duration
+   foreach pitch $pitchlist {
+     set s "noteoff $chanl $pitch"
+     puts $midihandle $s
+     }
+   flush $midihandle
+   }
+
 
    namespace export channel
    proc channel {chan program} {
@@ -320,7 +375,7 @@ namespace eval muzic {
  }
 }
 
-
+# Part 4.0 definitions of notes, chords, modes, intervals, ...
 
 set sharpnotes {C C# D D# E F F# G G# A A# B}
 set maj {0 4 7}
@@ -454,6 +509,7 @@ set tunes(octave,asc) {120 {48 48 24 12 12 24 24} {0 12 11 7 9 11 12}}
 #Willow Weep for Me - Ann Ronell 1932
 set tunes(octave,des) {80 {24 12 12 12 12 24} {0 -12 z -10 -7 -10}}
 
+# Part 5.0 initialization and ini file support
 
 proc initialize_trainer_array {} {
 global trainer
@@ -695,6 +751,8 @@ set trainer(rrepeats) 2
 if [file exists tksolfege.ini] {read_tksolfege_ini
    } else {write_ini_file tksolfege.ini;}
 
+# Part 6.0  lessons initializations
+
 # available lessons
 set chordlesson(0) {maj min}
 set chordlesson(1) {maj aug}
@@ -774,6 +832,8 @@ set sofa_lesson(7) {do re mi fa so la}
 set sofa_lesson(8) {do re mi fa so la ti do}
 set sofa_lesson(9) {la, ti, do re mi fa si la}
 
+
+# Part 7.0  random support
 
 #initialize these variables to some value in
 #case the user presses random buttons
@@ -904,6 +964,9 @@ array set roman {0 i 1 ii 2 iii 3 iv 4 v 5 vi 6 vii}
 # chord identification in order to avoid creating more widgets.
 # This makes the code somewhat less elegant as some functions
 # (test_interval, verify_interval) are used for two purposes.
+
+
+# Part 8.0  user interface support buttons, menus etc
 
 proc make_interface {} {
     global trainer
@@ -1229,6 +1292,9 @@ $v add radiobutton -label "randomly generated"\
  -command {setup_random_drum_trainer}
 }
 
+
+# Part 9.0 setup drums, figured bass, chords
+
 proc setup_random_drum_trainer {} {
 global trainer
 set trainer(drumsrc) random
@@ -1301,6 +1367,7 @@ proc update_inv {s} {
     .f.response.2 configure -text $s
 }
 
+# Part 10.0 exercise interface
 
 proc setup_exercise_interface {exercise} {
     global trainer
@@ -1576,6 +1643,8 @@ proc switch_keysig_lesson_menu {} {
     .f.lessmenu configure -menu .f.lessmenu.keysig
 }
 
+# Part 11.0 Keysig support
+
 proc label_keysig {key} {
     global majscale
     global trainer
@@ -1657,6 +1726,8 @@ proc make_scale_midi_offsets {mode} {
     return $midi_offsets
 }
 
+# Part 12.0 Figured Bass support
+
 # The Figured Bass representation needs to be updated any
 # time the key signature mode is changed.
 proc update_roman_representation {} {
@@ -1709,6 +1780,7 @@ proc initialize_scalenotelist {} {
     }
 }
 
+# Part 13.0 Configuration support
 
 
 # This procedure creates all the configuration windows used
@@ -2050,6 +2122,8 @@ proc change_instrument {dummy} {
     muzic::channel 0 $trainer(instrument)
 }
 
+# Part 14.0 lesson selection
+
 proc select_chord_lesson {num} {
     global chordlesson
     global trainer
@@ -2272,6 +2346,7 @@ proc config_your_own_rhythm_lesson {} {
     rhythm_switch_type
 }
 
+# Part 15.0 make lesson
 
 proc make_chord_lesson {} {
     global chordsel
@@ -2417,7 +2492,7 @@ proc remove_cadence_buttons {} {
      grid forget .w.$type }
 }
 
-   
+# Part 16.0 stats support 
 
 proc make_stats_window {} {
     global trainer
@@ -2704,6 +2779,8 @@ proc read_patch_names {} {
         125 "Helicopter" 126 "Applause" 127 "Gunshot" }
 }
 
+# Part 17.0 instrument button
+
 proc main_prog_dialog {} {
     global instrumentbut
     set instrumentbut .config.main.instrbut
@@ -2812,6 +2889,7 @@ proc remove_augdim_inv {chordtypes} {
     return $chordlist
 }
 
+# Part 18.0 pick chord, scale, diatonic chord, chromatic chord
 
 # The chord identification chromatic and diatonic share much
 # of the same code. The main difference is the way the test
@@ -3004,7 +3082,7 @@ switch $mode {
 calculate_mode_cadences 0
 
 
-
+# Part 19.0 tests
 
 proc random_number {top} {
     set n [expr int(rand()*$top)]
@@ -3104,6 +3182,7 @@ proc test_cadence {} {
   playcadence $troot $test_cadence
   }
 
+# Part 20.0 interval test
 
 #source show_testintv.tcl
 
@@ -3232,14 +3311,17 @@ proc test_interval {} {
     }
 }
 
+# Part 21.0 play function
+
 proc playchord {chordseq  mode} {
     global trainer
     if {$mode == "both"} {
         playchord_action $chordseq harmonic
         after $trainer(msec)
-        #after 500
         playchord_action $chordseq  melodic
-    } else {playchord_action $chordseq $mode}
+    } else {
+       playchord_action $chordseq $mode
+       }
 }
 
 
@@ -3255,23 +3337,32 @@ proc reverselist {mlist} {
 
 proc playchord_action {chordseq mode} {
     global trainer
+    global starkitversion
     muzic::channel 0 $trainer(instrument)
     if {[string equal $trainer(direction) down]} {
         set chordseq [reverselist $chordseq]}
-    foreach note $chordseq {
-         set k $note
+    if {$mode == "melodic"} {
+      foreach note $chordseq {
+        set k $note
         muzic::playnote 0 $k $trainer(velocity) $trainer(msec)
-        if {$mode == "melodic"} {after $trainer(msec)
-            muzic::playnote 0 $k 0 $trainer(msec)}
-    }
-    if {$mode == "harmonic"} {
         after $trainer(msec)
-        foreach note $chordseq {
-            set k $note
-            muzic::playnote 0 $k 0 0
         }
-    }
-}
+    } else {
+      if {$starkitversion} {
+        playchord_for_muzic_starkit $chordseq
+        } else {
+        muzic::playchord 0 $chordseq $trainer(velocity) $trainer(msec)
+        }
+      }
+  }
+
+proc playchord_for_muzic_starkit {chordseq} {
+ global trainer
+ muzic::channel 0 $trainer(instrument)
+ foreach note $chordseq {
+   muzic::playnote 0 $note $trainer(velocity) $trainer(msec)
+   }
+ }
 
 proc playinterval {root type dir mode} {
     global trainer
@@ -3356,22 +3447,30 @@ proc playscale {root scalelist} {
 proc playinterval_action {root type dir mode} {
     global interval
     global trainer
+    global starkitversion
+    #puts "playinterval_action $root $type $dir $mode"
     muzic::channel 0 $trainer(instrument)
-    muzic::playnote 0 $root $trainer(velocity) $trainer(msec)
-    if {$mode == "melodic"} {after $trainer(msec)
-        muzic::playnote 0 $root 0 10
+    if {$mode == "melodic"} {#after $trainer(msec)
+        muzic::playnote 0 $root $trainer(velocity) $trainer(msec)
+        #muzic::playnote 0 $root 0 10
     }
     set note [expr $root + $dir*$interval($type)]
-    muzic::playnote 0 $note $trainer(velocity) $trainer(msec)
     if {$mode == "melodic"} {after $trainer(msec)
-        muzic::playnote 0 $note 0 10
+        #muzic::playnote 0 $note 0 10
+        muzic::playnote 0 $note $trainer(velocity) $trainer(msec)
     }
     if {$mode == "harmonic"} {
-        after $trainer(msec)
-        muzic::playnote 0 $root 0 10
-        muzic::playnote 0 $note 0 10
+    #    puts "harmonic"
+      if {$starkitversion} {
+        muzic::playnote 0 $root $trainer(velocity) $trainer(msec)
+        muzic::playnote 0 $note $trainer(velocity) $trainer(msec)
+        } else {
+        muzic::playchord 0 [list $root $note] $trainer(velocity) $trainer(msec)
+        }
+        #after $trainer(msec)
     }
-    
+  # puts "playinterval_action done"
+ 
     #puts "playnote 0 $note $trainer(velocity)"
 }
 
@@ -3387,6 +3486,8 @@ proc playothernote {root type dir} {
     set note [expr $root + $dir*$interval($type)]
     muzic::playnote 0 $note $trainer(velocity) $trainer(msec)
 }
+
+# Part 22.0 repeat
 
 
 proc repeat {} {
@@ -3418,6 +3519,7 @@ proc repeat {} {
      }
 }
 
+# Part 23.0 confusion matrix support
 
 proc zero_chord_confusion_matrix {} {
     global trainer
@@ -3532,6 +3634,7 @@ proc zero_cadence_confusion_matrix {} {
     if {[winfo exist .stats]} {.stats.lab configure -text ""}
 }
 
+# Part 24.0 verification
 
 proc verify_chord {ntype} {
     global troot ttype
@@ -3686,6 +3789,7 @@ inv2 \u2076\u2084
 7inv3 \u2074\u2082
 }
 
+# Part 25.0 reveal answer
 
 proc reveal_chord {} {
     global try
@@ -3743,7 +3847,7 @@ global cadencename
 .f.ans configure -text $lang($cadencename)
 }
 
-
+# Part 26.0 rhythm support
 
 
 #rhythmd.tcl
@@ -4379,6 +4483,7 @@ proc startup_rhythm_dictation {} {
     set backup_index 0
 }
 
+# Part 27.0 melody dictation
 
 #source mel.tcl
 
@@ -5118,6 +5223,7 @@ proc config_your_own_sofa_lesson {} {
 
 #end of source mel.tcl
 
+# Part 28.0 draw notation 
 
 # tknotate.tcl
 #
@@ -5125,7 +5231,6 @@ proc config_your_own_sofa_lesson {} {
 # tkabc.tcl in the tclabc package that was developed by
 # Jef Moine.
 # http://moinejf.free.fr/tclabc-1.0.9.tar.gz.
-
 
 
 proc canvas_redraw {musicframe width} {
@@ -5768,6 +5873,8 @@ set last_highlight_index $note_index
 
 # end of tknotate.tcl
 
+# Part 29.0 Play support
+
 #source playtune.tcl
 
 proc convert_to_msec {eventlist bpm} {
@@ -5820,8 +5927,8 @@ proc playtune {} {
 bind . <h> {playtune}
 #end of source playtune.tcl
 
+# Part 30.0 draw chord
 
-#show_testchord.tcl
 
 proc show_chord {notelist clefcode musicframe} {
     # draws notes on staff for a given clef.
@@ -5935,6 +6042,7 @@ return $newchord
 }
 #end of source show_testchord.tcl
 
+# Part 31.0 chord support
 
 
 #source chordseq.tcl
@@ -6088,7 +6196,7 @@ proc spell_chord {chordname root} {
 
 #end of chordseq.tcl
 
-
+# Part 32.0 start up
 
 if {[file exist "$trainer(lang)"] ==1} {source "$trainer(lang)"
     set instructions "tksolfege $tksolfegeversion \n\n\
@@ -6184,6 +6292,8 @@ proc modify_keysig_buttons {mode} {
     }
 }
 
+# Part 33.0 verification continued
+
 proc verify_cadence {selected_cadence} {
 global test_cadence
 global lang
@@ -6267,6 +6377,8 @@ if {$ntrials > 0} {
         }
       }
 }
+
+# Part 34.0 key signature support
 
 proc verify_keysig {key} {
     global keysigtest lang
@@ -6500,6 +6612,7 @@ select_keysigclef 0
 
 #end of keysig.tcl
 
+# Part 35.0 grand staff
 
 #grandstaff.tcl
 proc grand_canvas_redraw {musicframe width} {
@@ -6573,6 +6686,8 @@ proc show_chord_in_grand_staff {chord} {
 #key_signature 3 48 30 0 .c
 #end of grandstaff.tcl
 
+# Part 36.0 advance settings
+
 proc advance_settings_config {} {
 global trainer lang
 if {![winfo exist .advanced]} {toplevel .advance
@@ -6605,6 +6720,7 @@ proc restart {} {
     .advance.msg config -text $lang(restart)
 }
 
+# Part 37.0 drum support
 
 #drumseq.tcl
 
