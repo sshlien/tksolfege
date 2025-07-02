@@ -35,7 +35,7 @@ package require Tk
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 # Original page:
-#      http://ifdo.pugmarks.com/~seymour/tksolfege
+#      http://ifdo.ca/~seymour/tksolfege
 
 # Table of Contents
 
@@ -93,7 +93,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.69 2025-06-30"
+set tksolfegeversion "1.70 2025-07-01"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -770,9 +770,14 @@ set chordlesson(12) {min mininv1 mininv2}
 set chordlesson(13) {maj min majinv1 majinv2}
 
 set diatoniclesson(0) {maj min aug dim}
-set diatoniclesson(1) {maj majinv1 min mininv1 dim diminv1 aug auginv1}
-set diatoniclesson(2) {maj majinv1 majinv2 min mininv1 mininv2 dim diminv1 diminv2 aug auginv1 auginv2}
-set diatoniclesson(3) {maj maj7 min min7 dim dim7 aug aug7}
+set diatoniclesson(1) {maj min majinv1 mininv1}
+set diatoniclesson(2) {maj min majinv2 mininv2}
+set diatoniclesson(3) {maj min majinv1 mininv1 majinv2 majinv2}
+set diatoniclesson(4) {maj majinv1 min mininv1 majinv2 mininv2}
+set diatoniclesson(5) {maj majinv1 majinv2 min mininv1 mininv2 dim diminv1 diminv2 aug auginv1 auginv2}
+set diatoniclesson(6) {maj min maj7 min7}
+set diatoniclesson(7) {aug dim auginv1 diminv1}
+set diatoniclesson(8) {maj maj7 min min7 dim dim7 aug aug7}
 
 set intervallesson(0) {unison perfect5th octave}
 set intervallesson(1) {perfect5th octave}
@@ -1045,9 +1050,13 @@ proc make_interface {} {
     set v .f.lessmenu.diatonicchords
     menu $v -tearoff 0
     $v add radiobutton -label "triads only" -command "select_diatonic_lesson 0"
-    $v add radiobutton -label "triads and first inversions" -command "select_diatonic_lesson 1"
-    $v add radiobutton -label "triads and inversions" -command "select_diatonic_lesson 2"
-    $v add radiobutton -label "triads and sevenths" -command "select_diatonic_lesson 3"
+    $v add radiobutton -label "major/minor and first inversion" -command "select_diatonic_lesson 1"
+    $v add radiobutton -label "major/minor  and 2nd inversion" -command "select_diatonic_lesson 2"
+    $v add radiobutton -label "major/minor and their inversions" -command "select_diatonic_lesson 4"
+    $v add radiobutton -label "triads and their inversions" -command "select_diatonic_lesson 5"
+    $v add radiobutton -label "major/minor and their 7ths" -command "select_diatonic_lesson 6"
+    $v add radiobutton -label "aug dim and 1st inversion" -command "select_diatonic_lesson 7"
+    $v add radiobutton -label "maj/min/aug/dim and their 7ths" -command "select_diatonic_lesson 7"
     $v add radiobutton -label $lang(yourown) -command config_your_own_diatonic_lesson
     
     
@@ -2997,7 +3006,9 @@ proc find_diatonic_root_and_chords {} {
             set figbass_index $indx
             set chord $modescalechords($indx)
             set chordlist [make_chord_associates $chord]
+            #puts "find_diatonic_root_and_chords:  chordlist = $chordlist for $chord indx=$indx for root12 = $root12"
             set chordlist [intersect_two_lists $trainer(chordtypes) $chordlist]
+            if {[llength $chordlist] < 1} continue
             set ntype [random_number [llength $chordlist]]
             set chord [lindex $chordlist $ntype]
             set rootkey [midi2notename $root]
