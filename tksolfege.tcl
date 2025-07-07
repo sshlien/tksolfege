@@ -86,14 +86,15 @@ set dirdrumseq drumseq
 lappend auto_path ./.
 
 wm protocol . WM_DELETE_WINDOW {
-   write_ini_file tksolfege.ini;
+   getGeometryOfTop
+   write_ini_file tksolfege.ini
    if {$starkitversion == 0} {muzic::close}
    exit}
 
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.70 2025-07-01"
+set tksolfegeversion "1.72 2025-07-06"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -191,6 +192,7 @@ array set lang {
     sofadic {solfege dictation}
     sofabadnote {solfege find wrong note}
     sofasing {solfege singing}
+    sofaid {sofa identification}
     soundfont {soundfont}
     stats	{stats}
     submit {submit}
@@ -524,6 +526,7 @@ if {$tcl_platform(os) == "Linux"} {
     set trainer(audio_driver) waveout
     }
 set trainer(version) $tksolfegeversion
+set trainer(top) ""
 
 set trainer(chordtypes) {maj min aug dim}
 set trainer(intervaltypes) {major3rd perfect5th octave}
@@ -584,6 +587,7 @@ proc write_ini_file {filename} {
     puts $handle "fluidsynth_path $trainer(fluidsynth_path)"
     puts $handle "audio_driver $trainer(audio_driver)"
     puts $handle "font $trainer(font)"
+    puts $handle "top $trainer(top)"
     puts $handle "velocity $trainer(velocity)"
     puts $handle "msec  $trainer(msec)"
     puts $handle "minpitch $trainer(minpitch)"
@@ -1004,6 +1008,8 @@ proc make_interface {} {
             -takefocus 0 $ww -padx 8
     set v .f.exercise.menu
     menu $v -tearoff 0
+    $v add radiobutton -label $lang(sofaid) \
+            -command "setup_exercise_interface sofaid"
     $v add radiobutton -label $lang(idchord) \
             -command "setup_exercise_interface chords"
     $v add radiobutton -label $lang(idchorddia) \
@@ -1524,6 +1530,20 @@ proc setup_exercise_interface {exercise} {
     }
     
     if {$trainer(exercise) == "sofadic"} {
+        .f.giveup configure -command show_sofa_answer
+        pack forget .f
+        pack forget .w
+        pack forget .rhythm
+        pack .f -side left
+        pack .dorayme -side right
+        .f.ans configure -text $lang($trainer(exercise))
+        switch_sofa_lesson_menu
+        set ntrials 0
+        set ncorrect 0
+        set nrepeats 0
+    }
+
+    if {$trainer(exercise) == "sofaid"} {
         .f.giveup configure -command show_sofa_answer
         pack forget .f
         pack forget .w
@@ -3110,6 +3130,7 @@ proc next_test {} {
 	rhythmdic {test_rhythm}
 	chords {test_chord}
 	chordsdia {test_chord}
+	sofaid {test_sofaid}
 	sofadic {test_sofadic}
 	sofasing {test_sofasing 0}
         sofabadnote {test_sofabadnote 0}
@@ -4520,6 +4541,8 @@ proc startup_sofa_dictation {} {
     global usersnotes
     global backup_index
     global lang
+    global trainer
+
     set usersnotes {}
     set backup_index 0
     set w .dorayme
@@ -4552,7 +4575,12 @@ proc startup_sofa_dictation {} {
     pack $w -side top -anchor w
     
     set_sofa_lesson
-    place_sofa_buttons
+    if {$trainer(exercise) == "sofaid"} {
+      place_sofa_id_buttons
+    } else {
+      place_sofa_buttons 
+    }
+
 }
 
 
@@ -4633,6 +4661,26 @@ proc place_sofa_buttons {} {
     set trainer(sofalesson) $sofanotes
 }
 
+proc place_sofa_id_buttons {} {
+    global sofasel sofas
+    global sofanotes
+    global trainer
+    global lang
+    set i 0
+    set sofanotes {}
+    set w .dorayme.sel
+    foreach note $sofas {
+        if {$sofasel($note)} {
+            button $w.$i -text $lang($note) -command "verify_sofa $note"
+            pack $w.$i -side left -anchor w
+            lappend sofanotes $note
+            incr i
+            if {$i > 11} {set w .dorayme.sel2}
+            if {$i > 23} {set w .dorayme.sel3}
+        }
+    }
+    set trainer(sofalesson) $sofanotes
+}
 
 proc clear_sofa_buttons {} {
     set w .dorayme.sel
@@ -4645,8 +4693,13 @@ proc clear_sofa_buttons {} {
 
 proc make_sofa_lesson {} {
     global trainer lang
+    puts "make_sofa_lesson for $trainer(exercise)"
     clear_sofa_buttons
-    place_sofa_buttons
+    if {$trainer(exercise) == "sofaid"} {
+      place_sofa_id_buttons
+    } else {
+      place_sofa_buttons
+    }
 }
 
 proc make_sofa_response {} {
@@ -4781,6 +4834,7 @@ proc check_sofa_response {} {
     set k 0
     incr ntrials
     set unotes [llength $usersnotes]
+    puts "check_sofa_response: usersnotes = $usernotes"
     if {![info exist melodylist]} {return -1}
     set mnotes [llength $melodylist]
     set dif [expr $mnotes - $unotes]
@@ -4826,6 +4880,7 @@ proc select_sofa_lesson {n} {
     global trainer
     global sofas
     global sofasel
+    puts "select_sofa_lesson: $n"
     if {$n < 10} {
         set trainer(sofalesson) $sofa_lesson($n)
     } else {
@@ -4833,7 +4888,11 @@ proc select_sofa_lesson {n} {
     }
     set_sofa_lesson
     clear_sofa_buttons
-    place_sofa_buttons
+    if {$trainer(exercise) == "sofaid"} {
+      place_sofa_id_buttons
+    } else {
+      place_sofa_buttons
+    }
 }
 
 proc set_sofa_lesson {} {
@@ -4857,6 +4916,21 @@ proc test_sofadic {} {
     make_sofa_response
     set first [lindex $melodylist 0]
     addsofa_response $first
+    update
+    #puts $melodylist
+    play_sofa
+    set answer_exposed 0
+}
+
+proc test_sofaid {} {
+    global melodylist
+    global answer_exposed
+    global lang
+    clear_sofa_response
+    clear_sofa_answer
+    update
+    make_sofa_note
+    set first [lindex $melodylist 0]
     update
     #puts $melodylist
     play_sofa
@@ -5071,6 +5145,17 @@ proc make_melody_list {} {
         }
         set place $newplace
     }
+}
+
+proc make_sofa_note {} {
+    global trainer
+    global sofanotes
+    global melodylist
+    set size [llength $sofanotes]
+    set place [expr int($size*rand())]
+    set note [lindex $sofanotes $place]
+    puts "make_sofa_note $note"
+    set melodylist [list $note]
 }
 
 proc make_melody_var_list {} {
@@ -5814,6 +5899,24 @@ proc notate_sofa {root clefcode} {
     key_signature $sf 0 30 $clefcode .doraysing.c
     #puts $notelist
     show_notelist $notelist $clefcode .doraysing.c
+}
+
+
+proc verify_sofa {note} {
+global melodylist
+global lang
+global trainer
+puts "verify_sofa: $note versus [lindex $melodylist 0]"
+if {$note == [lindex $melodylist 0]} {
+        .f.ans configure -text $lang(correct)
+        update
+         if {$trainer(autonew)} {
+            after $trainer(autonewdelay)
+            next_test
+        } 
+   } else {
+        .f.ans configure -text $lang(try)
+        }
 }
 
 proc verify_badnote {wrong_note} {
@@ -7438,7 +7541,18 @@ for {set i 1} {$i < $size} {incr i} {
 return -1
 }
 
+proc getGeometryOfTop {} {
+global trainer
+set g [wm geometry .]
+scan $g "%dx%d+%d+%d" w h x y
+set trainer(top) +$x+$y
+}
 
+proc positionWindow {} {
+global trainer
+if {[string length $trainer(top)] < 1} return
+wm geometry . $trainer(top)
+}
 
 
 
@@ -7473,6 +7587,7 @@ if {$trainer(makelog)} {set loghandle [open "tksolfege.log" "w"]}
 
 
 
+positionWindow 
 focus .f
 bind . <r> repeat
 bind . <n> next_test
