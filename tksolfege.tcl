@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.72 2025-07-06"
+set tksolfegeversion "1.75 2025-07-10"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -831,15 +831,16 @@ set compoundrhythmlesson(7) {100 101 102 103 104 105 106 107\
 
 
 set sofa_lesson(0) {do re mi}
-set sofa_lesson(1) {ti, do re mi}
-set sofa_lesson(2) {la, ti, do re mi}
-set sofa_lesson(3) {do re mi fa}
-set sofa_lesson(4) {do re mi fa so}
-set sofa_lesson(5) {ti, do re mi fa so}
-set sofa_lesson(6) {la, ti, do re mi fa si}
-set sofa_lesson(7) {do re mi fa so la}
-set sofa_lesson(8) {do re mi fa so la ti do}
-set sofa_lesson(9) {la, ti, do re mi fa si la}
+set sofa_lesson(1) {do re mi fa}
+set sofa_lesson(2) {do re mi fa so}
+set sofa_lesson(3) {do re mi fa so la}
+set sofa_lesson(4) {do re mi fa so la do}
+set sofa_lesson(5) {do re mi fa so la ti do}
+set sofa_lesson(6) {ti, do re mi}
+set sofa_lesson(7) {la, ti, do re mi}
+set sofa_lesson(8) {ti, do re mi fa so}
+set sofa_lesson(9) {la, ti, do re mi fa si}
+set sofa_lesson(10) {la, ti, do re mi fa si la}
 
 
 # Part 7.0  random support
@@ -992,6 +993,7 @@ proc make_interface {} {
     global reducedfont
     global figbas_inv
     global majormodes exotics
+    global sofa_lesson
 
     set deg "\u00B0"
     set butwidth 16
@@ -1010,6 +1012,12 @@ proc make_interface {} {
     menu $v -tearoff 0
     $v add radiobutton -label $lang(sofaid) \
             -command "setup_exercise_interface sofaid"
+    $v add radiobutton -label $lang(sofadic) \
+            -command "setup_exercise_interface sofadic"
+    $v add radiobutton -label $lang(sofabadnote) \
+            -command "setup_exercise_interface sofabadnote"
+    $v add radiobutton -label $lang(sofasing) \
+            -command "setup_exercise_interface sofasing"
     $v add radiobutton -label $lang(idchord) \
             -command "setup_exercise_interface chords"
     $v add radiobutton -label $lang(idchorddia) \
@@ -1028,12 +1036,6 @@ proc make_interface {} {
             -command "setup_exercise_interface sing"
     $v add radiobutton -label $lang(rhythmdic) \
             -command "setup_exercise_interface rhythmdic"
-    $v add radiobutton -label $lang(sofadic) \
-            -command "setup_exercise_interface sofadic"
-    $v add radiobutton -label $lang(sofabadnote) \
-            -command "setup_exercise_interface sofabadnote"
-    $v add radiobutton -label $lang(sofasing) \
-            -command "setup_exercise_interface sofasing"
     $v add radiobutton -label $lang(drumseq) \
             -command "setup_exercise_interface drumseq"
     
@@ -1101,8 +1103,8 @@ proc make_interface {} {
     
     set v .f.lessmenu.melody
     menu $v -tearoff 0
-    for {set i 0} {$i < 11} {incr i} {
-        $v add radiobutton -label "$lang(level) $i" -command "select_sofa_lesson $i"
+    for {set i 0} {$i < 10} {incr i} {
+        $v add radiobutton -label "$sofa_lesson($i)" -command "select_sofa_lesson $i"
     }
     $v add radiobutton -label "$lang(yourown)" -command config_your_own_sofa_lesson
 
@@ -1541,6 +1543,8 @@ proc setup_exercise_interface {exercise} {
         set ntrials 0
         set ncorrect 0
         set nrepeats 0
+        pack forget .dorayme.ctl.playscale
+        pack .dorayme.ctl.submit
     }
 
     if {$trainer(exercise) == "sofaid"} {
@@ -1551,6 +1555,8 @@ proc setup_exercise_interface {exercise} {
         pack .f -side left
         pack .dorayme -side right
         .f.ans configure -text $lang($trainer(exercise))
+        pack .dorayme.ctl.playscale
+        pack forget .dorayme.ctl.submit
         switch_sofa_lesson_menu
         set ntrials 0
         set ncorrect 0
@@ -2110,7 +2116,7 @@ proc switch_config_sheet {} {
     pack forget .config.rdrumseq
     if {$trainer(exercise) == "rhythmdic"} {
         pack .config.rhythm
-    } elseif {$trainer(exercise) == "sofasing" || $trainer(exercise) == "sofadic" || $trainer(exercise) == "sofabadnote"} {
+    } elseif {$trainer(exercise) == "sofasing" || $trainer(exercise) == "sofadic" || $trainer(exercise) == "sofabadnote" || $trainer(exercise) == "sofaid"} {
         pack .config.sofa
         if {$trainer(exercise) == "sofasing"} {
             pack .config.sofasing
@@ -2544,6 +2550,7 @@ proc make_stats_window {} {
        "keysigid" {display_keysig_stats}
        "idfigbas" {display_figbass_stats}
        "scalesid" {display_scale_stats}
+       "sofaid" {display_sofaid_stats}
        "idcad" {display_cadence_stats}
        "drumseq" {display_drum_stats}
        "sofabadnote" {display_badnote_stats}
@@ -2632,6 +2639,34 @@ proc display_interval_stats {} {
         label .stats.m."$r"0 -text $item1
         grid .stats.m."$r"0 -row $r -column 0
         foreach item2 $trainer(intervaltypes) {
+            incr c
+            set field [set item1]-[set item2]
+            label .stats.m.$field -text $cmatrix($item1-$item2)
+            grid .stats.m.$field -row $r -column $c
+        }
+    }
+}
+
+proc display_sofaid_stats {} {
+    global trainer
+    global cmatrix
+    global lang
+    global sofas
+    set r 0
+    set c 1
+    button .stats.m.0 -text $lang(reset) -command zero_sofaid_confusion_matrix
+    grid .stats.m.0 -row 0 -column 0
+    foreach item $trainer(sofalesson) {
+        label .stats.m.0$c -text $item
+        grid .stats.m.0$c -row 0 -column $c
+        incr c
+    }
+    foreach item1 $trainer(sofalesson) {
+        incr r
+        set c 0
+        label .stats.m."$r"0 -text $item1
+        grid .stats.m."$r"0 -row $r -column 0
+        foreach item2 $trainer(sofalesson) {
             incr c
             set field [set item1]-[set item2]
             label .stats.m.$field -text $cmatrix($item1-$item2)
@@ -3535,6 +3570,7 @@ proc repeat {} {
                  play_leader
                  play_rhythm}
     "sofadic"  {play_sofa}
+    "sofaid" {play_sofa}
     "sofabadnote"  {play_sofa}
     "sofasing" {
         playsofa_action_1 [expr $trainer(sofa_tonic) + $trainer(transpose)]}
@@ -3664,6 +3700,25 @@ proc zero_cadence_confusion_matrix {} {
         }
     }
     if {[winfo exist .stats]} {.stats.lab configure -text ""}
+}
+
+proc zero_sofaid_confusion_matrix {} {
+    global trainer
+    global cmatrix
+    global ncorrect total_time ntrials
+    global try
+    set try 0; # to signal that pick_scale not done
+    set ncorrect 0
+    set total_time 0
+    foreach item1 $trainer(sofalesson) {
+      foreach item2 $trainer(sofalesson) {
+        set field [set item1]-[set item2]
+        set cmatrix($field) 0
+        if {[winfo exist .stats.m.$field]} {
+            .stats.m.$field configure -text $cmatrix($field)
+           }
+        }
+      }
 }
 
 # Part 24.0 verification
@@ -4554,6 +4609,7 @@ proc startup_sofa_dictation {} {
     pack $w -anchor nw
     button $w.submit -text $lang(submit) -command check_sofa_response
     pack $w.submit  -anchor nw -side left
+    button $w.playscale -text scale  -command {playsofa_notes $trainer(sofa_tonic)}
 
     set w .dorayme.sel
     frame $w
@@ -4659,6 +4715,7 @@ proc place_sofa_buttons {} {
         }
     }
     set trainer(sofalesson) $sofanotes
+    set trainer(sofalesson) $sofanotes
 }
 
 proc place_sofa_id_buttons {} {
@@ -4666,6 +4723,7 @@ proc place_sofa_id_buttons {} {
     global sofanotes
     global trainer
     global lang
+    #puts "place_sofa_id_buttons:"
     set i 0
     set sofanotes {}
     set w .dorayme.sel
@@ -4680,6 +4738,7 @@ proc place_sofa_id_buttons {} {
         }
     }
     set trainer(sofalesson) $sofanotes
+    zero_sofaid_confusion_matrix
 }
 
 proc clear_sofa_buttons {} {
@@ -4693,7 +4752,7 @@ proc clear_sofa_buttons {} {
 
 proc make_sofa_lesson {} {
     global trainer lang
-    puts "make_sofa_lesson for $trainer(exercise)"
+    #puts "make_sofa_lesson for $trainer(exercise)"
     clear_sofa_buttons
     if {$trainer(exercise) == "sofaid"} {
       place_sofa_id_buttons
@@ -4834,7 +4893,7 @@ proc check_sofa_response {} {
     set k 0
     incr ntrials
     set unotes [llength $usersnotes]
-    puts "check_sofa_response: usersnotes = $usernotes"
+    puts "check_sofa_response: usersnotes = $usersnotes"
     if {![info exist melodylist]} {return -1}
     set mnotes [llength $melodylist]
     set dif [expr $mnotes - $unotes]
@@ -4880,7 +4939,6 @@ proc select_sofa_lesson {n} {
     global trainer
     global sofas
     global sofasel
-    puts "select_sofa_lesson: $n"
     if {$n < 10} {
         set trainer(sofalesson) $sofa_lesson($n)
     } else {
@@ -4909,6 +4967,7 @@ proc test_sofadic {} {
     global melodylist
     global answer_exposed
     global lang
+    global test_time
     clear_sofa_response
     clear_sofa_answer
     update
@@ -4920,12 +4979,14 @@ proc test_sofadic {} {
     #puts $melodylist
     play_sofa
     set answer_exposed 0
+    set test_time [clock seconds]
 }
 
 proc test_sofaid {} {
     global melodylist
     global answer_exposed
     global lang
+    global test_time
     clear_sofa_response
     clear_sofa_answer
     update
@@ -4935,6 +4996,7 @@ proc test_sofaid {} {
     #puts $melodylist
     play_sofa
     set answer_exposed 0
+    set test_time [clock seconds]
 }
 
 
@@ -5277,6 +5339,18 @@ proc playsofa_action_1 {root} {
     muzic::playnote 0 $k 0 $trainer(msec)
 }
 
+proc playsofa_notes {root} {
+    global sofanotes
+    global trainer lang
+    global sofapitch
+    muzic::channel 0 $trainer(instrument)
+    foreach note $sofanotes {
+        set k [expr $sofapitch($note) + $root]
+        muzic::playnote 0 $k $trainer(velocity) $trainer(msec)
+        after $trainer(msec)
+        muzic::playnote 0 $k 0 $trainer(msec)
+    }
+}
 
 proc play_selected_scale {} {
     global trainer
@@ -5906,9 +5980,17 @@ proc verify_sofa {note} {
 global melodylist
 global lang
 global trainer
-puts "verify_sofa: $note versus [lindex $melodylist 0]"
-if {$note == [lindex $melodylist 0]} {
+global test_time
+global ncorrect
+global ntrials
+global cmatrix
+
+set response_time [expr [clock seconds] - $test_time]
+set actual_note [lindex $melodylist 0]
+#puts "verify_sofa: $response_time  $note versus $actual_note"
+if {$note == $actual_note} {
         .f.ans configure -text $lang(correct)
+        incr correct
         update
          if {$trainer(autonew)} {
             after $trainer(autonewdelay)
@@ -5916,7 +5998,10 @@ if {$note == [lindex $melodylist 0]} {
         } 
    } else {
         .f.ans configure -text $lang(try)
+        incr ntrials
         }
+   incr cmatrix($actual_note-$note)
+   #puts "cmatrix($actual_note-$note) = $cmatrix($actual_note-$note)"
 }
 
 proc verify_badnote {wrong_note} {
