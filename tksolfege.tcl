@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.75 2025-07-10"
+set tksolfegeversion "1.78 2025-07-15 08:13"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -185,6 +185,7 @@ array set lang {
     rhythmdic {rhythmic dictation}
     rhythminstr {rhythm instrument}
     scaleid {scale identification}
+    settings {settings}
     sharps {sharps}
     singi	{sing interval}
     slow {slower}
@@ -335,7 +336,6 @@ namespace eval muzic {
    namespace export playnote
    proc playnote {chanl pitch velocity duration} {
    variable midihandle
-   #puts "playnote $pitch"
    set s "noteon $chanl $pitch $velocity"
    puts $midihandle $s
    set s "noteoff $chanl $pitch" 
@@ -719,6 +719,7 @@ set trainer(direction) up
 set trainer(makelog) 0
 set trainer(font) {Arial 10 bold}
 set trainer(lang) "none"
+set trainer(repeattonic) 1
 set trainer(rhythm_accent) 25
 set trainer(rhythm_beats_per_bar) 2
 set trainer(rhythm_bars) 2
@@ -1018,14 +1019,14 @@ proc make_interface {} {
             -command "setup_exercise_interface sofabadnote"
     $v add radiobutton -label $lang(sofasing) \
             -command "setup_exercise_interface sofasing"
+    $v add radiobutton -label $lang(idinterval) \
+            -command "setup_exercise_interface intervals"
     $v add radiobutton -label $lang(idchord) \
             -command "setup_exercise_interface chords"
     $v add radiobutton -label $lang(idchorddia) \
             -command "setup_exercise_interface chordsdia"
     $v add radiobutton -label $lang(idfigbas) \
             -command "setup_exercise_interface idfigbas"
-    $v add radiobutton -label $lang(idinterval) \
-            -command "setup_exercise_interface intervals"
     $v add radiobutton -label $lang(idkeysig) \
             -command "setup_exercise_interface keysigid"
     $v add radiobutton -label $lang(idscales) \
@@ -1038,6 +1039,8 @@ proc make_interface {} {
             -command "setup_exercise_interface rhythmdic"
     $v add radiobutton -label $lang(drumseq) \
             -command "setup_exercise_interface drumseq"
+    $v add radiobutton -label $lang(settings) \
+            -command "advance_settings_config"
     
     
     eval button .f.repeat -text $lang(repeat) -command  repeat  -takefocus 0 $ww
@@ -1537,13 +1540,15 @@ proc setup_exercise_interface {exercise} {
         pack forget .w
         pack forget .rhythm
         pack .f -side left
-        pack .dorayme -side right
+        #pack .dorayme -side right
+        destroy .dorayme
+        startup_sofa_dictation
         .f.ans configure -text $lang($trainer(exercise))
         switch_sofa_lesson_menu
         set ntrials 0
         set ncorrect 0
         set nrepeats 0
-        pack forget .dorayme.ctl.playscale
+        #pack forget .dorayme.ctl.playscale
         pack .dorayme.ctl.submit
     }
 
@@ -1553,7 +1558,9 @@ proc setup_exercise_interface {exercise} {
         pack forget .w
         pack forget .rhythm
         pack .f -side left
-        pack .dorayme -side right
+        #pack .dorayme -side right
+        destroy .dorayme
+        startup_sofa_dictation
         .f.ans configure -text $lang($trainer(exercise))
         pack .dorayme.ctl.playscale
         pack forget .dorayme.ctl.submit
@@ -1929,6 +1936,7 @@ proc make_config {} {
     make_config_keysig
     make_config_file_drumseq
     make_config_random_drumseq
+    make_config_sofa_id
     label_keysig $trainer(key)
     
     switch_config_sheet
@@ -2009,6 +2017,7 @@ proc make_config_sofa {} {
     label $w.pitchval -text $note -width 3
     label $w.tonic -text $lang(smallint)
     checkbutton $w.toniccheck -variable trainer(smallint)
+    checkbutton $w.playtonic -variable trainer(repeattonic)
     label $w.instrlab -text $lang(instrument)
     button $w.instrbut -text $patches($trainer(instrument)) \
             -command sofa_prog_dialog
@@ -2054,6 +2063,35 @@ proc make_config_sofa {} {
     grid $w1.transpose $w1.transca
     grid $w1.pat $w1.pattern
 }
+
+proc make_config_sofa_id {} {
+    global lang trainer
+    global patches
+    set w .config.sofaid
+    frame $w
+
+    label $w.playtoniclab -text "play tonic"
+    checkbutton $w.playtonic -variable trainer(repeattonic)
+    label $w.pitch -text $lang(pitch)
+    scale $w.pitchsca -from 0 -to 127 -variable trainer(sofa_tonic)\
+            -length 128 -orient hor -width 5 -command update_note_label
+    set note [midi2notename $trainer(sofa_tonic)]
+    label $w.pitchval -text $note -width 3
+    label $w.instrlab -text $lang(instrument)
+    button $w.instrbut -text $patches($trainer(instrument)) \
+            -command sofa_prog_dialog
+    label $w.vellab -text $lang(velocity)
+    scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
+            -length 128 -orient hor -width 5
+    label $w.notedurlab -text $lang(duration)
+    scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
+            -length 128 -orient hor -width 5
+    grid $w.playtoniclab $w.playtonic
+    grid $w.pitch $w.pitchsca $w.pitchval
+    grid $w.instrlab $w.instrbut
+    grid $w.vellab $w.velsca
+    grid $w.notedurlab $w.notedursca
+  }
 
 proc update_note_label {pitch} {
     set note [midi2notename $pitch]
@@ -2102,6 +2140,16 @@ proc activate_cmplx_checkbutton {} {
       .config.main.cmplx configure -state normal}
 }
 
+proc sofapack {} {
+    global trainer
+    if {$trainer(exercise) == "sofadic"} {
+        pack .config.sofa
+    } elseif {$trainer(exercise) == "sofaid"} {
+        pack .config.sofaid
+    } elseif {$trainer(exercise) == "sofabadnote"} {
+        pack .config.sofa
+    } else {pack .config.sofa .config.sofasing}
+}
 
 proc switch_config_sheet {} {
     global trainer
@@ -2109,6 +2157,7 @@ proc switch_config_sheet {} {
     pack forget .config.main
     pack forget .config.sofa
     pack forget .config.sofasing
+    pack forget .config.sofaid
     pack forget .config.rhythm
     pack forget .config.keysig
     pack forget .config.scale_id
@@ -2117,10 +2166,7 @@ proc switch_config_sheet {} {
     if {$trainer(exercise) == "rhythmdic"} {
         pack .config.rhythm
     } elseif {$trainer(exercise) == "sofasing" || $trainer(exercise) == "sofadic" || $trainer(exercise) == "sofabadnote" || $trainer(exercise) == "sofaid"} {
-        pack .config.sofa
-        if {$trainer(exercise) == "sofasing"} {
-            pack .config.sofasing
-        } else {pack forget .config.sofasing}
+        sofapack
     } elseif {$trainer(exercise) == "keysigid"} {
         pack .config.keysig
     } elseif {$trainer(exercise) == "drumseq"} {
@@ -4701,6 +4747,7 @@ proc place_sofa_buttons {} {
     global sofanotes
     global trainer
     global lang
+    #puts "play_sofa_buttons:"
     set i 0
     set sofanotes {}
     set w .dorayme.sel
@@ -4752,7 +4799,7 @@ proc clear_sofa_buttons {} {
 
 proc make_sofa_lesson {} {
     global trainer lang
-    #puts "make_sofa_lesson for $trainer(exercise)"
+    puts "make_sofa_lesson for $trainer(exercise)"
     clear_sofa_buttons
     if {$trainer(exercise) == "sofaid"} {
       place_sofa_id_buttons
@@ -4893,7 +4940,6 @@ proc check_sofa_response {} {
     set k 0
     incr ntrials
     set unotes [llength $usersnotes]
-    puts "check_sofa_response: usersnotes = $usersnotes"
     if {![info exist melodylist]} {return -1}
     set mnotes [llength $melodylist]
     set dif [expr $mnotes - $unotes]
@@ -5216,7 +5262,7 @@ proc make_sofa_note {} {
     set size [llength $sofanotes]
     set place [expr int($size*rand())]
     set note [lindex $sofanotes $place]
-    puts "make_sofa_note $note"
+    #puts "make_sofa_note $note"
     set melodylist [list $note]
 }
 
@@ -5301,9 +5347,11 @@ proc play_sofa {} {
     global trainer
     if {$trainer(exercise) == "sofasing"} {
         playsofa_action [expr $trainer(sofa_tonic) + $trainer(transpose)]
+    } elseif {$trainer(exercise) == "sofaid"} {
+        playsofa_action_2 $trainer(sofa_tonic)
     } else {
         playsofa_action $trainer(sofa_tonic)
-    }
+       } 
 }
 
 
@@ -5318,7 +5366,7 @@ proc playsofa_action {root} {
     foreach note $melodylist {
         set k [expr $sofapitch($note) + $root]
         muzic::playnote 0 $k $trainer(velocity) $trainer(msec)
-        after $trainer(msec)
+        #after $trainer(msec)
         muzic::playnote 0 $k 0 $trainer(msec)
     }
 }
@@ -5339,6 +5387,26 @@ proc playsofa_action_1 {root} {
     muzic::playnote 0 $k 0 $trainer(msec)
 }
 
+proc playsofa_action_2 {root} {
+    #plays the first note of melodylist
+    global melodylist
+    global trainer lang
+    global sofapitch
+    if {![info exist melodylist]} {
+        .f.ans configure -text $lang(firstpress)
+        return}
+    muzic::channel 0 $trainer(instrument)
+    set note [lindex $melodylist 0]
+    set k [expr $sofapitch($note) + $root]
+    if {$trainer(repeattonic)} { 
+      muzic::playnote 0 $root $trainer(velocity) $trainer(msec)
+      }
+    muzic::playnote 0 $k $trainer(velocity) $trainer(msec)
+    #after $trainer(msec)
+    muzic::playnote 0 $k 0 $trainer(msec)
+}
+
+
 proc playsofa_notes {root} {
     global sofanotes
     global trainer lang
@@ -5347,7 +5415,7 @@ proc playsofa_notes {root} {
     foreach note $sofanotes {
         set k [expr $sofapitch($note) + $root]
         muzic::playnote 0 $k $trainer(velocity) $trainer(msec)
-        after $trainer(msec)
+        #after $trainer(msec)
         muzic::playnote 0 $k 0 $trainer(msec)
     }
 }
@@ -5987,7 +6055,6 @@ global cmatrix
 
 set response_time [expr [clock seconds] - $test_time]
 set actual_note [lindex $melodylist 0]
-#puts "verify_sofa: $response_time  $note versus $actual_note"
 if {$note == $actual_note} {
         .f.ans configure -text $lang(correct)
         incr correct
@@ -6001,7 +6068,6 @@ if {$note == $actual_note} {
         incr ntrials
         }
    incr cmatrix($actual_note-$note)
-   #puts "cmatrix($actual_note-$note) = $cmatrix($actual_note-$note)"
 }
 
 proc verify_badnote {wrong_note} {
