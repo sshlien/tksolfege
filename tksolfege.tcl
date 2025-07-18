@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.78 2025-07-15 08:13"
+set tksolfegeversion "1.78 2025-07-16 15:13"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -840,8 +840,8 @@ set sofa_lesson(5) {do re mi fa so la ti do}
 set sofa_lesson(6) {ti, do re mi}
 set sofa_lesson(7) {la, ti, do re mi}
 set sofa_lesson(8) {ti, do re mi fa so}
-set sofa_lesson(9) {la, ti, do re mi fa si}
-set sofa_lesson(10) {la, ti, do re mi fa si la}
+set sofa_lesson(9) {la, ti, do re mi fa so}
+set sofa_lesson(10) {la, ti, do re mi fa so la}
 
 
 # Part 7.0  random support
@@ -2102,6 +2102,8 @@ proc update_note_label {pitch} {
 proc select_clef {clefcode} {
     global lang
     global trainer melodylist
+    if {$trainer(exercise) == "sofadic" || $trainer(exercise) == "sofaid"} {return}
+
     set v .config.sofasing.clefbutton
     switch -- $clefcode {
         -1 {$v config -text $lang(automatic)}
