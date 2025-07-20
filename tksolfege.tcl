@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.78 2025-07-16 15:13"
+set tksolfegeversion "1.78 2025-07-20 10:40"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -2051,7 +2051,7 @@ proc make_config_sofa {} {
     
     scale $w1.transca -from -12 -to 12 -variable trainer(transpose)\
             -length 128 -orient hor -width 5
-    select_clef $trainer(clefcode)
+    if {$trainer(exercise) == "sofasing"} {select_clef $trainer(clefcode)}
     
     grid $w.nnotes $w.nnotesca
     grid $w.pitch $w.pitchsca $w.pitchval
