@@ -86,7 +86,7 @@ set dirdrumseq drumseq
 lappend auto_path ./.
 
 wm protocol . WM_DELETE_WINDOW {
-   getGeometryOfTop
+   getGeometryOfAllTopLevels
    write_ini_file tksolfege.ini
    if {$starkitversion == 0} {muzic::close}
    exit}
@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.78 2025-07-20 10:40"
+set tksolfegeversion "1.79 2025-07-22 16:41"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -237,6 +237,15 @@ http://ifdo.ca/~seymour/tksolfege\n\n\
         seymour shlien  email fy733@ncf.ca"
 
 set keysf 0
+
+proc positionWindow {window} {
+   global trainer
+   if {[string length $trainer($window)] < 1} return
+   wm geometry $window $trainer($window)
+   }
+
+#
+
 
 # Part 2.0 setpath, and checks
 
@@ -576,7 +585,32 @@ set trainer(melpat) 3
 set trainer(testmode) aural
 set trainer(mode) maj
 set trainer(key) C
+
+#window geometry
+set trainer(.) ""
+set trainer(.config) ""
+set trainer(.ownlesson) ""
+set trainer(.stats) ""
+set trainer(.help) ""
+set trainer(.prog) ""
+set trainer(.rhythmselector) ""
+set trainer(.sofasel) ""
+set trainer(.advance) ""
 }
+
+proc getGeometryOfAllTopLevels {} {
+global trainer
+set toplevellist {"." ".config" ".ownlesson" ".stats" ".help"
+   ".prog" ".rhythmselector" ".sofasel" ".advance"}
+foreach top $toplevellist {
+    if {[winfo exist $top]} {
+      set g [wm geometry $top]
+      scan $g "%dx%d+%d+%d" w h x y
+      set trainer($top) +$x+$y
+      }
+    }
+}
+
 
 proc write_ini_file {filename} {
     global trainer
@@ -637,6 +671,15 @@ proc write_ini_file {filename} {
     puts $handle "rarrg $trainer(rarrg)"
     puts $handle "rndrums $trainer(rndrums)"
     puts $handle "rrepeats $trainer(rrepeats)"
+    puts $handle ". $trainer(.)"
+    puts $handle ".config $trainer(.config)"
+    puts $handle ".ownlesson $trainer(.ownlesson)"
+    puts $handle ".stats $trainer(.stats)"
+    puts $handle ".help $trainer(.help)"
+    puts $handle ".prog $trainer(.prog)"
+    puts $handle ".rhythmselector $trainer(.rhythmselector)"
+    puts $handle ".sofasel $trainer(.sofasel)"
+    puts $handle ".advance $trainer(.advance)"
     close $handle
 }
 
@@ -1839,6 +1882,7 @@ proc make_config {} {
     if {[winfo exist .config]} return
     set w .config
     toplevel .config
+    positionWindow .config
     frame .config.main
     set w .config.main
     label $w.instrlab -text $lang(instrument)
@@ -2014,7 +2058,7 @@ proc make_config_sofa {} {
     scale $w.pitchsca -from 0 -to 127 -variable trainer(sofa_tonic)\
             -length 128 -orient hor -width 5 -command update_note_label
     set note [midi2notename $trainer(sofa_tonic)]
-    label $w.pitchval -text $note -width 3
+    label $w.pitchval -text $note -width 4
     label $w.tonic -text $lang(smallint)
     checkbutton $w.toniccheck -variable trainer(smallint)
     checkbutton $w.playtonic -variable trainer(repeattonic)
@@ -2023,10 +2067,10 @@ proc make_config_sofa {} {
             -command sofa_prog_dialog
     label $w.vellab -text $lang(velocity)
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
     scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     set w1 .config.sofasing
     frame $w1
     label $w1.clef -text $lang(clef)
@@ -2074,28 +2118,32 @@ proc make_config_sofa_id {} {
     checkbutton $w.playtonic -variable trainer(repeattonic)
     label $w.pitch -text $lang(pitch)
     scale $w.pitchsca -from 0 -to 127 -variable trainer(sofa_tonic)\
-            -length 128 -orient hor -width 5 -command update_note_label
+            -length 128 -orient hor -width 10 -command update_note_label
     set note [midi2notename $trainer(sofa_tonic)]
-    label $w.pitchval -text $note -width 3
+    label $w.pitchval -text $note -width 4
     label $w.instrlab -text $lang(instrument)
     button $w.instrbut -text $patches($trainer(instrument)) \
-            -command sofa_prog_dialog
+            -pady 2 -command sofa_prog_dialog
     label $w.vellab -text $lang(velocity)
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
     scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
+    checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
+    #checkbutton $w.autoplay -variable trainer(autoplay) -text $lang(autop)
     grid $w.playtoniclab $w.playtonic
     grid $w.pitch $w.pitchsca $w.pitchval
-    grid $w.instrlab $w.instrbut
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
+    grid $w.instrlab $w.instrbut
+    grid $w.autonew
   }
 
 proc update_note_label {pitch} {
     set note [midi2notename $pitch]
     .config.sofa.pitchval configure -text $note
+    .config.sofaid.pitchval configure -text $note
 }
 
 
@@ -2301,6 +2349,7 @@ proc config_your_own_scale_lesson {} {
     if {[winfo exist .ownlesson]} {destroy .ownlesson}
     set w .ownlesson
     toplevel $w
+    positionWindow .ownlesson
     set i 0
     foreach mode $allmodes {
         if {[lsearch $trainer(scaletypes) $mode] != -1} {
@@ -2323,6 +2372,7 @@ global tcl_platform
 if {[winfo exist .ownlesson]} {destroy .ownlesson}
 set w .ownlesson
 toplevel $w
+positionWindow .ownlesson
 foreach chordtype {"" inv1 inv2 7 7inv1 7inv2 7inv3} {
         checkbutton $w.$chordtype -text "$chordtype \($figtypecode($chordtype)\)"\
          -variable diatonictype($chordtype) -command make_diatonic_lesson
@@ -2339,6 +2389,7 @@ proc config_your_own_chord_lesson {} {
     global trainer
     if {[winfo exist .ownlesson]} {destroy .ownlesson}
     set w .ownlesson
+    positionWindow .ownlesson
     toplevel $w
     set i 0
     foreach type $allchordtypes {
@@ -2408,6 +2459,7 @@ proc config_your_own_interval_lesson {} {
     if {[winfo exist .ownlesson]} {destroy .ownlesson}
     set w .ownlesson
     toplevel $w
+    positionWindow .ownlesson
     set i 0
     set nhalf [expr [llength $allintervals] /2]
     foreach type $allintervals {
@@ -2585,7 +2637,9 @@ proc make_stats_window {} {
     global nrepeats
     
     if {[winfo exist .stats]} {foreach w [winfo children .stats] {
-                destroy $w}} else {toplevel .stats}
+        destroy $w}} else {
+                  toplevel .stats
+                  positionWindow .stats}
     frame .stats.m
     grid .stats.m
     display_empty_stats
@@ -2835,6 +2889,7 @@ proc helpwindow {textfile} {
         destroy .help
     }
     toplevel .help
+    positionWindow .help
     text .help.t -width 50 -height 10 -wrap word -yscrollcommand {.help.ysbar set}
     scrollbar .help.ysbar -orient vertical -command {.help.t yview}
     pack .help.ysbar -side right -fill y -in .help
@@ -2925,6 +2980,7 @@ proc change_prog_dialog {} {
     set w .prog
     if {[winfo exists .prog] == 0} {
         toplevel $w
+        positionWindow .prog
         label $w.sel -text $patches($trainer(instrument))  -relief sunken
         scrollbar $w.scroll -command "$w.list yview"
         listbox $w.list -yscroll "$w.scroll set" -setgrid 1 -height 10\
@@ -4087,6 +4143,7 @@ proc make_duple_compound_interface {} {
     global im
     if {![winfo exist .rhythmselector]} {
         toplevel .rhythmselector
+        positionWindow .rhythmselector
         set w .rhythmselector.sel
         frame .rhythmselector.sel
         pack .rhythmselector.sel
@@ -4718,6 +4775,7 @@ proc make_sofa_buttons {} {
     set w .sofasel
     if {[winfo exist $w]} return
     toplevel $w
+    positionWindow .sofasel
     foreach n $sofas {
         checkbutton $w.$n -text $lang($n) -variable sofasel($n) -command make_sofa_lesson
     }
@@ -6786,6 +6844,7 @@ proc config_your_own_keysig {} {
         foreach w [winfo children .ownlesson] {
            destroy $w}} else {
          toplevel .ownlesson
+         positionWindow .ownlesson
          }
     set w .ownlesson
     for {set i 1} {$i < 8} {incr i} {
@@ -6958,6 +7017,7 @@ proc show_chord_in_grand_staff {chord} {
 proc advance_settings_config {} {
 global trainer lang
 if {![winfo exist .advanced]} {toplevel .advance
+   positionWindow .advance
    wm title .advance "advanced settings"
    set w .advance
    label $w.fluidlab -text "fluidsynth path"
@@ -7694,18 +7754,7 @@ for {set i 1} {$i < $size} {incr i} {
 return -1
 }
 
-proc getGeometryOfTop {} {
-global trainer
-set g [wm geometry .]
-scan $g "%dx%d+%d+%d" w h x y
-set trainer(top) +$x+$y
-}
 
-proc positionWindow {} {
-global trainer
-if {[string length $trainer(top)] < 1} return
-wm geometry . $trainer(top)
-}
 
 
 
@@ -7740,7 +7789,7 @@ if {$trainer(makelog)} {set loghandle [open "tksolfege.log" "w"]}
 
 
 
-positionWindow 
+positionWindow .
 focus .f
 bind . <r> repeat
 bind . <n> next_test
