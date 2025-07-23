@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.79 2025-07-22 16:41"
+set tksolfegeversion "1.80 2025-07-23 19:45"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -180,6 +180,7 @@ array set lang {
     repeat	{repeat}
     repeatability {repeatability}
     repeats {repeats}
+    repeaton {repeat tonic}
     reset  {reset}
     restart {You need to restart tksolfege}
     rhythmdic {rhythmic dictation}
@@ -660,6 +661,7 @@ proc write_ini_file {filename} {
     puts $handle "makelog $trainer(makelog)"
     puts $handle "lockconfig $trainer(lockconfig)"
     puts $handle "repeatability $trainer(repeatability)"
+    puts $handle "repeattonic $trainer(repeattonic)"
     puts $handle "clefcode $trainer(clefcode)"
     puts $handle "transpose $trainer(transpose)"
     puts $handle "testmode $trainer(testmode)"
@@ -1892,20 +1894,20 @@ proc make_config {} {
     
     label $w.vellab -text $lang(velocity)
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     label $w.lowpitchlab -text $lang(lowest)
     scale $w.lowpitchsca -from 11 -to 120 -variable trainer(minpitch)\
-            -length 128 -orient hor -width 5 -command change_range
+            -length 128 -orient hor -width 10 -command change_range
     set lowpitch [midi2notename $trainer(minpitch)]
     label $w.lowpitchname -text $lowpitch -width 3
     label $w.highpitchlab -text $lang(highest)
     scale $w.highpitchsca -from 11 -to 120 -variable trainer(maxpitch)\
-            -length 128 -orient hor -width 5 -command change_range
+            -length 128 -orient hor -width 10 -command change_range
     set highpitch [midi2notename $trainer(maxpitch)]
     label $w.highpitchname -text $highpitch -width 3
     label $w.notedurlab -text $lang(duration)
     scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     checkbutton $w.autoplay -variable trainer(autoplay) -text $lang(autop)
     
@@ -2000,15 +2002,15 @@ proc make_config_rhythm {} {
     pack $w
     label $w.bpm -text $lang(bpm)
     scale $w.bpmsca -from 20 -to 120 -variable trainer(rhythmbpm)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     
     label $w.beatsperbar -text $lang(beatsperbar)
     scale $w.beatsbarsca -from 1 -to 4 -variable trainer(rhythm_beats_per_bar)\
-            -length 128 -orient hor -width 5 -command set_max_bars
+            -length 128 -orient hor -width 10 -command set_max_bars
     
     label $w.bars -text $lang(bars)
     scale $w.barsca -from 1 -to 4 -variable trainer(rhythm_bars)\
-            -length 128 -orient hor -width 5 -command reset_rhythm_melody_stats
+            -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
     
     label $w.norest -text $lang(norest)
     checkbutton $w.norestbut -variable trainer(norest)
@@ -2023,15 +2025,15 @@ proc make_config_rhythm {} {
     
     label $w.pitch -text $lang(pitch)
     scale $w.pitchsca -from 0 -to 127 -variable trainer(rhythmpitch)\
-            -length 128 -orient hor -width 5 -command reset_rhythm_melody_stats
+            -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
     
     label $w.velocity -text $lang(velocity)
     scale $w.midivol -from 0 -to 100 -variable trainer(rhythmvelocity)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     
     label $w.accent -text $lang(accent)
     scale $w.accsca -from 0 -to 50 -variable trainer(rhythm_accent)\
-            -length 128 -orient hor -width 5 -command reset_rhythm_melody_stats
+            -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
     
     
     grid $w.bpm $w.bpmsca
@@ -2053,15 +2055,14 @@ proc make_config_sofa {} {
     frame $w
     label $w.nnotes -text $lang(nnotes)
     scale $w.nnotesca -from 1 -to 16 -variable trainer(sofa_notes)\
-            -length 128 -orient hor -width 5 -command reset_rhythm_melody_stats
+            -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
     label $w.pitch -text $lang(pitch)
     scale $w.pitchsca -from 0 -to 127 -variable trainer(sofa_tonic)\
-            -length 128 -orient hor -width 5 -command update_note_label
+            -length 128 -orient hor -width 10 -command update_note_label
     set note [midi2notename $trainer(sofa_tonic)]
     label $w.pitchval -text $note -width 4
     label $w.tonic -text $lang(smallint)
     checkbutton $w.toniccheck -variable trainer(smallint)
-    checkbutton $w.playtonic -variable trainer(repeattonic)
     label $w.instrlab -text $lang(instrument)
     button $w.instrbut -text $patches($trainer(instrument)) \
             -command sofa_prog_dialog
@@ -2094,7 +2095,7 @@ proc make_config_sofa {} {
     $v add radiobutton -label 0321 -command "select_pat 5"
     
     scale $w1.transca -from -12 -to 12 -variable trainer(transpose)\
-            -length 128 -orient hor -width 5
+            -length 128 -orient hor -width 10
     if {$trainer(exercise) == "sofasing"} {select_clef $trainer(clefcode)}
     
     grid $w.nnotes $w.nnotesca
@@ -2115,7 +2116,7 @@ proc make_config_sofa_id {} {
     frame $w
 
     label $w.playtoniclab -text "play tonic"
-    checkbutton $w.playtonic -variable trainer(repeattonic)
+    checkbutton $w.playtonic -variable trainer(repeattonic) -text $lang(repeaton)
     label $w.pitch -text $lang(pitch)
     scale $w.pitchsca -from 0 -to 127 -variable trainer(sofa_tonic)\
             -length 128 -orient hor -width 10 -command update_note_label
@@ -2123,7 +2124,7 @@ proc make_config_sofa_id {} {
     label $w.pitchval -text $note -width 4
     label $w.instrlab -text $lang(instrument)
     button $w.instrbut -text $patches($trainer(instrument)) \
-            -pady 2 -command sofa_prog_dialog
+            -pady 2 -command sofa_id_prog_dialog
     label $w.vellab -text $lang(velocity)
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
             -length 128 -orient hor -width 10
@@ -2131,13 +2132,11 @@ proc make_config_sofa_id {} {
     scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
-    #checkbutton $w.autoplay -variable trainer(autoplay) -text $lang(autop)
-    grid $w.playtoniclab $w.playtonic
     grid $w.pitch $w.pitchsca $w.pitchval
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
     grid $w.instrlab $w.instrbut
-    grid $w.autonew
+    grid $w.autonew $w.playtonic
   }
 
 proc update_note_label {pitch} {
@@ -2969,6 +2968,12 @@ proc rhythm_prog_dialog {} {
 proc sofa_prog_dialog {} {
     global instrumentbut
     set instrumentbut .config.sofa.instrbut
+    change_prog_dialog
+}
+
+proc sofa_id_prog_dialog {} {
+    global instrumentbut
+    set instrumentbut .config.sofaid.instrbut
     change_prog_dialog
 }
 
