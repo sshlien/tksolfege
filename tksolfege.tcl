@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.80 2025-07-23 19:45"
+set tksolfegeversion "1.81 2025-07-24 17:15"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -148,7 +148,7 @@ array set lang {
     idchorddia {chord identification (diatonic scale)}
     idfigbas {figured bass notation}
     idinterval {interval identification}
-    instruct {please see tksolfege.pdf on sourceforge.net or}
+    instruct {please go to https://tksolfege.sourceforge.io}
     instrument {instrument}
     idkeysig {key signature identification}
     idscales {scale identification}
@@ -206,15 +206,15 @@ array set lang {
     velocity {loudness}
     visual	{visually}
     yourown	{your own}
-    so,  sol,	si,  si,	le,  le,	la,  la,
+    so,  so,	si,  si,	le,  le,	la,  la,
     li,  li,	te,  te,	ti,  ti,	do   do
     di   di		ra   ra		re   re		ri   ri
     me   me		mi   mi		fa   fa		fi   fi
-    se   se		so   sol	si   si		le   le
+    se   se		so   so		si   si		le   le
     la   la		li   li		te   te		ti   ti
     do'  do'	di'  di'        ra'  ra'	re'  re'
     ri'  ri'	me'  me'	mi'  mi'	fa'  fa'
-    fi'  fi'	se'  se'	so'  sol'
+    fi'  fi'	se'  se'	so'  so'
     unison     unison	minor2nd  minor2nd	major2nd  major2nd
     minor3rd   minor3rd     major3rd  major3rd	perfect4th perfect4th
     tritone    tritone	perfect5th perfect5th	minor6th  minor6th
@@ -233,9 +233,8 @@ array set lang {
 }
 
 set instructions "tksolfege $tksolfegeversion \n\n\
-        $lang(instruct)
-http://ifdo.ca/~seymour/tksolfege\n\n\
-        seymour shlien  email fy733@ncf.ca"
+        $lang(instruct)\n
+seymour shlien  email fy733@ncf.ca"
 
 set keysf 0
 
@@ -1906,7 +1905,7 @@ proc make_config {} {
     set highpitch [midi2notename $trainer(maxpitch)]
     label $w.highpitchname -text $highpitch -width 3
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     checkbutton $w.autoplay -variable trainer(autoplay) -text $lang(autop)
@@ -2070,7 +2069,7 @@ proc make_config_sofa {} {
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
             -length 128 -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     set w1 .config.sofasing
     frame $w1
@@ -2129,7 +2128,7 @@ proc make_config_sofa_id {} {
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
             -length 128 -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 200 -to 1500 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     grid $w.pitch $w.pitchsca $w.pitchval
@@ -4835,7 +4834,6 @@ proc place_sofa_id_buttons {} {
     global sofanotes
     global trainer
     global lang
-    #puts "place_sofa_id_buttons:"
     set i 0
     set sofanotes {}
     set w .dorayme.sel
@@ -4864,7 +4862,6 @@ proc clear_sofa_buttons {} {
 
 proc make_sofa_lesson {} {
     global trainer lang
-    puts "make_sofa_lesson for $trainer(exercise)"
     clear_sofa_buttons
     if {$trainer(exercise) == "sofaid"} {
       place_sofa_id_buttons
