@@ -94,7 +94,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.81 2025-07-24 17:15"
+set tksolfegeversion "1.82 2025-07-24 00:25"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -4946,9 +4946,8 @@ proc clear_sofa_response {} {
     global backup_index
     global usersnotes
     set backup_index 0
-    for {set i 0} {$i < $trainer(sofa_notes)} {incr i}  {
-        pack forget .dorayme.response.$i
-        destroy .dorayme.response.$i
+    foreach but [pack content .dorayme.response] {
+        destroy $but
         }
     set usersnotes {}
 }
