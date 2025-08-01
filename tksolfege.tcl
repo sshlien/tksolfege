@@ -76,6 +76,7 @@ package require Tk
 # Part 35.0 grand staff
 # Part 36.0 advance settings
 # Part 37.0 drum support
+# Part 38.0 Chord progressions
 
 
 set error_return [catch {package require starkit} errmsg]
@@ -94,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.82 2025-07-24 00:25"
+set tksolfegeversion "1.83 2025-08-01 16:05"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -519,6 +520,29 @@ set tunes(major7th,des) {120 {12 24 8 4} {0 -11 -2 -3}}
 set tunes(octave,asc) {120 {48 48 24 12 12 24 24} {0 12 11 7 9 11 12}}
 #Willow Weep for Me - Ann Ronell 1932
 set tunes(octave,des) {80 {24 12 12 12 12 24} {0 -12 z -10 -7 -10}}
+
+array set chordprogressions {
+ 0 {I V IV V}
+ 1 {I IV I V}
+ 2 {I V IV I}
+ 3 {I IV V IV}
+ 4 {I V I IV}
+ 5 {I IV V I}
+ 6 {I IV vi V}
+ 7 {I vi IV V}
+ 8 {vi IV I V}
+ 9 {I V vi IV}
+10 {VI V I vi}
+}
+
+#Reference:
+#https://www.hooktheory.com/theorytab/common-chord-progressions
+#https://en.wikipedia.org/wiki/List_of_chord_progressions
+#https://mastering.com/wp-content/uploads/2019/02/Chord-Progression-Cheat-Sheet.pdf
+
+
+
+
 
 # Part 5.0 initialization and ini file support
 
@@ -7773,6 +7797,49 @@ bind .drumseq.can  <Button-3> start_playseq
 
 #end of drumseq.tcl
 
+# Part 38.0 Chord progressions
+array set romansymbols2midi {
+I 0 ii 2 iii 4 IV 5 V 7 vi 9 vii 11
+}
+
+#puts "make_chordlist 60 maj: [make_chordlist 60 maj]"
+#puts  "make_scalenotelist C: [make_scalenotelist C]"
+
+proc roman2chordlist {roman root} {
+global romansymbols2midi
+set shift $romansymbols2midi($roman)
+if {[string is lower [string index $roman 0]]} {
+   make_chordlist [expr $root + $shift] min
+} else {
+   make_chordlist [expr $root + $shift] maj
+  } 
+}
+
+proc makeprogression {progr root} {
+puts "playprogression $progr"
+set progchordlist {}
+foreach roman $progr {
+  set octaveshift [expr [random_number 2]*12]
+  set shiftedroot [expr $root - $octaveshift]
+  set chordlist [roman2chordlist $roman $shiftedroot]
+  puts "$roman $chordlist $octaveshift"
+  lappend progchordlist $chordlist
+  }
+puts "progchordlist = $progchordlist"
+return $progchordlist
+}
+
+proc playprogression {progchordlist} {
+foreach prog $progchordlist {
+   playchord $prog harmonic
+  }
+}
+
+
+
+#end of Part 38.0
+
+
 set error_return [catch {muzic::init} errmsg]
 if {$error_return} {
   tk_messageBox -type ok -icon error -message $errmsg
@@ -7784,10 +7851,13 @@ bind . <a> {advance_settings_config}
 
 
 setup_exercise_interface $trainer(exercise)
+
+#set progchordlist [makeprogression $chordprogressions(2) 48] 
+#playprogression $progchordlist
+
 if {$trainer(exercise) == "intervals"} {set ttype unison};
 
 if {$trainer(makelog)} {set loghandle [open "tksolfege.log" "w"]}
-
 
 
 positionWindow .
@@ -7797,5 +7867,4 @@ bind . <n> next_test
 bind . <S> "savedruminfo stdio"
 
 bind . <Alt-l> pick_language_pack
-
 
