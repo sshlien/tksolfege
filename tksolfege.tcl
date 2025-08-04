@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.83 2025-08-01 16:05"
+set tksolfegeversion "1.83 2025-08-04 15:08"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -7019,6 +7019,7 @@ proc show_chord_in_grand_staff {chord} {
     set treblechord [lindex $splitchord 0]
     set chordsym ""
     set tagid "chord"
+    puts "show_chord_in_grand_staff: chord = $chord"
     foreach note $basschord {
         set sym [note2sym $note]
         set chordsym [concat $chordsym  $sym]
@@ -7802,6 +7803,8 @@ array set romansymbols2midi {
 I 0 ii 2 iii 4 IV 5 V 7 vi 9 vii 11
 }
 
+set romansymbolslist {I ii iii IV V vi vii}
+
 #puts "make_chordlist 60 maj: [make_chordlist 60 maj]"
 #puts  "make_scalenotelist C: [make_scalenotelist C]"
 
@@ -7829,13 +7832,77 @@ puts "progchordlist = $progchordlist"
 return $progchordlist
 }
 
+proc show_progression_in_grand_staff {progression} {
+set xoffset 0
+foreach chord $progression {
+    set splitchord [split_chord $chord]
+    set basschord [lindex $splitchord 1]
+    set treblechord [lindex $splitchord 0]
+    set chordsym ""
+    set tagid "chord"
+    puts "show_chord_in_grand_staff: chord = $chord"
+    foreach note $basschord {
+        set sym [note2sym $note]
+        set chordsym [concat $chordsym  $sym]
+    }
+    if {[string length $chordsym] > 0} {note-draw $chordsym 6 [expr $xoffset + 50] 42  .s.c $tagid}
+    set chordsym ""
+    foreach note $treblechord {
+        set sym [note2sym $note]
+        set chordsym [concat $chordsym  $sym]
+    }
+    if {[string length $chordsym] > 0} {note-draw $chordsym 0 [expr $xovvset + 500]  0  .s.c $tagid  }
+  incr xoffset 25
+  }
+}
+
+
+proc draw_progression {progchordlist} {
+set keyprogression [list]
+foreach prog $progchordlist {
+  set keychord [list]
+  foreach midi $prog {
+    set key [midi2notename $midi]
+    lappend keychord $key
+    }
+  lappend keyprogression $keychord
+  }
+  puts "draw_progression $progchordlist $keyprogression"
+  grand_canvas_redraw .s.c 160
+  pack .s.c
+  pack .s
+  show_progression_in_grand_staff $keyprogression
+}   
+
 proc playprogression {progchordlist} {
 foreach prog $progchordlist {
    playchord $prog harmonic
   }
 }
 
+global romanresponse
 
+proc place_chordprog_buttons {} {
+global romansymbolslist
+global romanresponse
+set romanresponse ""
+frame .pr
+pack .pr
+label .pr.0 -width 12 -text $romanresponse -relief groove
+pack .pr.0 -side left
+set i 1
+foreach fig $romansymbolslist {
+  button .pr.$i -text $fig -command "append_roman $fig"
+  pack .pr.$i -side left
+  incr i
+  }
+}
+
+proc append_roman {fig} {
+global romanresponse
+set romanresponse [append romanresponse " $fig"]
+.pr.0 configure -text "$romanresponse"
+}
 
 #end of Part 38.0
 
@@ -7853,7 +7920,9 @@ bind . <a> {advance_settings_config}
 setup_exercise_interface $trainer(exercise)
 
 #set progchordlist [makeprogression $chordprogressions(2) 48] 
-#playprogression $progchordlist
+##playprogression $progchordlist
+#draw_progression $progchordlist
+#place_chordprog_buttons 
 
 if {$trainer(exercise) == "intervals"} {set ttype unison};
 
