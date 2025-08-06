@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.83 2025-08-04 15:08"
+set tksolfegeversion "1.83 2025-08-06 12:39"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -177,6 +177,7 @@ array set lang {
     phr {phrygian}
     picklesson {please choose lesson first}
     pitch   {MIDI pitch}
+    prog {progressions}
     random {random}
     repeat	{repeat}
     repeatability {repeatability}
@@ -1073,7 +1074,6 @@ proc make_interface {} {
     # intervals or chords
     frame .w -borderwidth 3 -relief sunken
     pack .w -side bottom -after .f
-    
     # setup exercise menubutton
     eval menubutton .f.exercise -text $lang(exercise) -menu .f.exercise.menu\
             -takefocus 0 $ww -padx 8
@@ -1095,6 +1095,8 @@ proc make_interface {} {
             -command "setup_exercise_interface chordsdia"
     $v add radiobutton -label $lang(idfigbas) \
             -command "setup_exercise_interface idfigbas"
+    $v add radiobutton -label $lang(prog) \
+            -command "setup_exercise_interface prog"
     $v add radiobutton -label $lang(idkeysig) \
             -command "setup_exercise_interface keysigid"
     $v add radiobutton -label $lang(idscales) \
@@ -1474,19 +1476,20 @@ proc setup_exercise_interface {exercise} {
     set trainer(exercise) $exercise
     if {[winfo exist .config]} {switch_config_sheet}
     
-    pack forget .s
+    destroy .s
     pack forget .w
     pack forget .b
 # scale types for this lesson
     pack forget .c
     pack forget .k
-    pack forget .dorayme
+    #pack forget .dorayme
+    destroy .dorayme
     pack forget .doraysing
     pack forget .rhythm
     pack forget .drumenu
     pack forget .drumseq
+    pack forget .pr
 
-    .s.l configure -text ""
     destroy .msg
     grid forget .f.response .f.submit .f.musicscale
     grid forget .f.fast .f.slow .f.test
@@ -1498,7 +1501,11 @@ proc setup_exercise_interface {exercise} {
     remove_chord_buttons
     if {$trainer(exercise) == "chords" ||
         $trainer(exercise) == "chordsdia"} {
-        .s.c configure -height 140
+        frame .s
+        label .s.l -text ""
+        canvas .s.c -width 120 -height 140 
+        pack .s.c .s.l -side left 
+        pack .s -side bottom
         set n [llength $trainer(chordtypes)]
         set m [expr $n/2]
         if {[expr $n % 2] == 1} {incr m}
@@ -1561,8 +1568,10 @@ proc setup_exercise_interface {exercise} {
     
     if {$trainer(exercise) == "intervals" ||
         $trainer(exercise) == "sing"} {
-        .s.c configure -height 140
-        .s.l configure -text ""
+        frame .s
+        canvas .s.c -width 140 -height 140
+        label .s.l  -text ""
+        pack .s.c .s.l
         set n [llength $trainer(intervaltypes)]
         set m [expr $n / 3]
         if {[expr $n % 3]} {incr m}
@@ -1608,7 +1617,6 @@ proc setup_exercise_interface {exercise} {
         pack forget .w
         pack forget .rhythm
         pack .f -side left
-        #pack .dorayme -side right
         destroy .dorayme
         startup_sofa_dictation
         .f.ans configure -text $lang($trainer(exercise))
@@ -1616,7 +1624,6 @@ proc setup_exercise_interface {exercise} {
         set ntrials 0
         set ncorrect 0
         set nrepeats 0
-        #pack forget .dorayme.ctl.playscale
         pack .dorayme.ctl.submit
     }
 
@@ -1626,7 +1633,6 @@ proc setup_exercise_interface {exercise} {
         pack forget .w
         pack forget .rhythm
         pack .f -side left
-        #pack .dorayme -side right
         destroy .dorayme
         startup_sofa_dictation
         .f.ans configure -text $lang($trainer(exercise))
@@ -1672,7 +1678,10 @@ proc setup_exercise_interface {exercise} {
         pack forget .f
         pack .f -side top
         pack .k -after .f -side bottom
-        .s.c configure -height 90
+        frame .s
+        canvas .s.c -width 140 -height 90
+        pack .s.c
+        pack .s
         .f.ans configure -text $lang(idkeysig)
         .f.giveup configure -command reveal_keysig
         set keysf 0
@@ -1682,7 +1691,10 @@ proc setup_exercise_interface {exercise} {
    if {$trainer(exercise) == "scalesid"} {
          #remove_interval_buttons
         .f.giveup configure -command reveal_scale
-        .s.c configure -height 140
+        #frame .s
+        #canvas .s.c -width 140 -height 140
+        #pack .s.c
+        #pack .s
         set i 0
         foreach type $trainer(scaletypes) {
             set col [expr $i % 2]
@@ -1697,12 +1709,21 @@ proc setup_exercise_interface {exercise} {
        .f.lessmenu configure -menu .f.lessmenu.scales
         zero_scales_confusion_matrix
    }
+
+    if {$trainer(exercise) == "prog"} {
+       .f.ans configure -text $lang(prog)
+       place_chordprog_buttons 
+    }
     
     if {$trainer(exercise) == "idfigbas"} {
         pack forget .f
         pack .f -side top
         pack .b -side top
         pack .c -side top
+        frame .s
+        canvas .s.c -width 140 -height 140
+        label .s.l  -text ""
+        pack .s.c .s.l
         .f.ans configure -text $lang(idfigbas)
         .f.lessmenu configure -menu .f.lessmenu.diatonicchords
         activate_mode_keysig
@@ -3306,6 +3327,7 @@ proc next_test {} {
 	idfigbas {test_chord}
 	idcad {test_cadence}
 	drumseq {test_drumseq}
+        prog {test_progression}
 	default {test_interval}
         }
 	
@@ -3349,6 +3371,14 @@ proc test_chord {} {
     if {$trainer(testmode) == "aural" || $trainer(testmode) == "both"} {
         playchord $chordseq  $trainer(playmode)}
     set test_time [clock seconds]
+}
+
+proc test_progression {} {
+global chordprogressions
+set n [random_number 10]
+set progchordlist [makeprogression $chordprogressions($n) 48] 
+draw_progression $progchordlist
+playprogression $progchordlist
 }
 
 proc test_scalesid {} {
@@ -4734,8 +4764,9 @@ proc startup_sofa_dictation {} {
     set usersnotes {}
     set backup_index 0
     set w .dorayme
-    frame $w
-    pack $w -anchor nw
+    pack propagate . 1
+    frame .dorayme 
+    pack .dorayme -side top
 
     set w .dorayme.ctl
     frame $w
@@ -4783,7 +4814,7 @@ proc startup_sofa_sing {} {
     set w .doraysing
     frame $w
     
-    set width [expr 80 + 20*$trainer(sofa_notes)]
+    set width [expr 120 + 25*$trainer(sofa_notes)]
     set sofacanvas .doraysing.c
     canvas $sofacanvas -height 100 -width $width
     pack $sofacanvas
@@ -5618,7 +5649,8 @@ proc note-draw {sym vclef xoffset yoffset  musicframe id} {
         set flip $flipper($i)
         switch  --  $flip {
             0 {$musicframe create image $xoffset [expr {$yoffset2 + 2}] \
-                        -image note1 -anchor w -tag note$id} 
+                        -image note1 -anchor w -tag note$id
+                         } 
             1 {$musicframe create image [expr $xoffset+6] [expr {$yoffset2 + 2}] \
                         -image note1 -anchor w -tag note$id} 
             -1 {$musicframe create image [expr $xoffset-6] [expr {$yoffset2 + 2}] \
@@ -6295,10 +6327,10 @@ proc show_chord {notelist clefcode musicframe} {
     }
 }
 
-frame .s -borderwidth 0
-canvas .s.c -width 140 -height 160
-label .s.l -text "" -width 16
-pack .s.c .s.l -side left
+#frame .s -borderwidth 0
+#canvas .s.c -width 140 -height 160
+#label .s.l -text "" -width 16
+#pack .s.c .s.l -side left
 
 set sharpnatural {F# F F F= C# C C C= G# G G G= D# D D D= A# A A A= E# E E E= B# B B B=}
 set flatnatural {Bb B Bv Bv B B= Eb E E E= Ab A A A= Db D D D= Gb G G G= Cb C C= Fb F F F=}
@@ -6580,6 +6612,7 @@ if {[lindex $trainer(rhythmtypes) 0] >= 100} {
 make_interface
 read_patch_names
 startup_rhythm_dictation
+# required for sofa sing
 startup_sofa_dictation
 startup_sofa_sing
 set scaleoffsets [make_scale_midi_offsets $trainer(mode)]
@@ -7019,7 +7052,6 @@ proc show_chord_in_grand_staff {chord} {
     set treblechord [lindex $splitchord 0]
     set chordsym ""
     set tagid "chord"
-    puts "show_chord_in_grand_staff: chord = $chord"
     foreach note $basschord {
         set sym [note2sym $note]
         set chordsym [concat $chordsym  $sym]
@@ -7819,11 +7851,17 @@ if {[string is lower [string index $roman 0]]} {
 }
 
 proc makeprogression {progr root} {
-puts "playprogression $progr"
 set progchordlist {}
+global romansymbols2midi
 foreach roman $progr {
+  set shift $romansymbols2midi($roman)
+  puts "makeprogression roman = $roman shift = $shift"
   set octaveshift [expr [random_number 2]*12]
-  set shiftedroot [expr $root - $octaveshift]
+  if {$shift > 5} {
+    set shiftedroot [expr $root - $octaveshift]
+  } else {
+    set shiftedroot $root
+  }
   set chordlist [roman2chordlist $roman $shiftedroot]
   puts "$roman $chordlist $octaveshift"
   lappend progchordlist $chordlist
@@ -7840,7 +7878,6 @@ foreach chord $progression {
     set treblechord [lindex $splitchord 0]
     set chordsym ""
     set tagid "chord"
-    puts "show_chord_in_grand_staff: chord = $chord"
     foreach note $basschord {
         set sym [note2sym $note]
         set chordsym [concat $chordsym  $sym]
@@ -7851,13 +7888,19 @@ foreach chord $progression {
         set sym [note2sym $note]
         set chordsym [concat $chordsym  $sym]
     }
-    if {[string length $chordsym] > 0} {note-draw $chordsym 0 [expr $xovvset + 500]  0  .s.c $tagid  }
+    if {[string length $chordsym] > 0} {note-draw $chordsym 0 [expr $xoffset + 50]  0  .s.c $tagid  }
   incr xoffset 25
   }
 }
 
 
 proc draw_progression {progchordlist} {
+if {![winfo exist .s]} {
+    frame .s
+    canvas .s.c -width 140 -height 140
+    pack .s.c -anchor nw
+    pack .s -side top -anchor nw
+ }
 set keyprogression [list]
 foreach prog $progchordlist {
   set keychord [list]
@@ -7884,11 +7927,10 @@ global romanresponse
 
 proc place_chordprog_buttons {} {
 global romansymbolslist
-global romanresponse
-set romanresponse ""
+destroy .pr
 frame .pr
-pack .pr
-label .pr.0 -width 12 -text $romanresponse -relief groove
+label .pr.0 -width 12 -relief groove -text ""
+pack .pr -side top
 pack .pr.0 -side left
 set i 1
 foreach fig $romansymbolslist {
@@ -7919,10 +7961,6 @@ bind . <a> {advance_settings_config}
 
 setup_exercise_interface $trainer(exercise)
 
-#set progchordlist [makeprogression $chordprogressions(2) 48] 
-##playprogression $progchordlist
-#draw_progression $progchordlist
-#place_chordprog_buttons 
 
 if {$trainer(exercise) == "intervals"} {set ttype unison};
 
