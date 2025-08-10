@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.83 2025-08-06 12:39"
+set tksolfegeversion "1.85 2025-08-10 10.12"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -533,7 +533,9 @@ array set chordprogressions {
  7 {I vi IV V}
  8 {vi IV I V}
  9 {I V vi IV}
-10 {VI V I vi}
+10 {IV V I vi}
+11 {vi ii V I}
+12 {I vi ii V}
 }
 
 #Reference:
@@ -1048,6 +1050,90 @@ array set roman {0 i 1 ii 2 iii 3 iv 4 v 5 vi 6 vii}
 
 # Part 8.0  user interface support buttons, menus etc
 
+proc make_testframe_buttons {} {
+    global allintervals
+    global lang
+    global interval
+    set butwidth 16
+    # intervals or chords
+    if {[winfo exist .w]} return
+    frame .w -borderwidth 3 -relief sunken
+    pack .w -side bottom -after .f
+
+    set i 0
+    foreach intvl $allintervals {
+        set interval($intvl) $i
+        incr i
+        button .w.$intvl -text $lang($intvl) -width 8 -command "verify_interval $intvl"
+    }
+    button .w.maj -text maj  -command "verify_chord maj" -width $butwidth
+    button .w.majinv1 -text "majinv1" -command "verify_chord majinv1" -width $butwidth
+    button .w.majinv2 -text "majinv2" -command "verify_chord majinv2" -width $butwidth
+    button .w.min -text minor -command "verify_chord min" -width $butwidth
+    button .w.mininv1 -text "mininv1" -command "verify_chord mininv1" -width $butwidth
+    button .w.mininv2 -text "mininv2" -command "verify_chord mininv2" -width $butwidth
+    button .w.aug -text aug -command "verify_chord aug" -width $butwidth
+    button .w.auginv1 -text auginv1 -command "verify_chord auginv1" -width $butwidth
+    button .w.auginv2 -text auginv2 -command "verify_chord auginv2" -width $butwidth
+    button .w.dim -text dim -command "verify_chord dim" -width $butwidth
+    button .w.diminv1 -text diminv1 -command "verify_chord diminv1" -width $butwidth
+    button .w.diminv2 -text diminv2 -command "verify_chord diminv2" -width $butwidth
+    button .w.majmin -text majmin -command "verify_chord majmin" -width $butwidth
+    button .w.majmininv1 -text majmininv1 -command "verify_chord majmininv1" -width $butwidth
+    button .w.majmininv2 -text majmininv2 -command "verify_chord majmininv2" -width $butwidth
+    button .w.majmininv3 -text majmininv3 -command "verify_chord majmininv3" -width $butwidth
+    button .w.maj7 -text maj7 -command "verify_chord maj7" -width $butwidth
+    button .w.maj7inv1 -text maj7inv1 -command "verify_chord maj7inv1" -width $butwidth
+    button .w.maj7inv2 -text maj7inv2 -command "verify_chord maj7inv2" -width $butwidth
+    button .w.maj7inv3 -text maj7inv3 -command "verify_chord maj7inv3" -width $butwidth
+    button .w.min7 -text min7 -command "verify_chord min7" -width $butwidth
+    button .w.min7inv1 -text min7inv1 -command "verify_chord min7inv1" -width $butwidth
+    button .w.min7inv2 -text min7inv2 -command "verify_chord min7inv2" -width $butwidth
+    button .w.min7inv3 -text min7inv3 -command "verify_chord min7inv3" -width $butwidth
+    button .w.halfdim7 -text halfdim7 -command "verify_chord halfdim7" -width $butwidth
+    button .w.halfdim7inv1 -text halfdim7inv1 -command "verify_chord halfdim7inv1" -width $butwidth
+    button .w.halfdim7inv2 -text halfdim7inv2 -command "verify_chord halfdim7inv2" -width $butwidth
+    button .w.halfdim7inv3 -text halfdim7inv3 -command "verify_chord halfdim7inv3" -width $butwidth
+    button .w.dim7 -text dim7 -command "verify_chord dim7" -width $butwidth
+    button .w.dim7inv1 -text dim7inv1 -command "verify_chord dim7inv1" -width $butwidth
+    button .w.dim7inv2 -text dim7inv2 -command "verify_chord dim7inv2" -width $butwidth
+    button .w.dim7inv3 -text dim7inv3 -command "verify_chord dim7inv3" -width $butwidth
+    button .w.aug7 -text aug7 -command "verify_chord aug7" -width $butwidth
+    button .w.aug7inv1 -text aug7inv1 -command "verify_chord aug7inv1" -width $butwidth
+    button .w.aug7inv2 -text aug7inv2 -command "verify_chord aug7inv2" -width $butwidth
+    button .w.aug7inv3 -text aug7inv3 -command "verify_chord aug7inv3" -width $butwidth
+
+    button .w.ionian -text ionian -command "verify_scale ionian" -width $butwidth
+    button .w.major -text "major (ionian)" -command "verify_scale major" -width $butwidth
+    button .w.dorian -text dorian -command "verify_scale dorian" -width $butwidth
+    button .w.phrygian -text phrygian -command "verify_scale phrygian" -width $butwidth
+    button .w.lydian -text lydian -command "verify_scale lydian" -width $butwidth
+    button .w.mixolydian -text mixolydian -command "verify_scale mixolydian" -width $butwidth
+    button .w.aeolian -text aeolian -command "verify_scale aeolian" -width $butwidth
+    button .w.locrian -text locrian -command "verify_scale locrian" -width $butwidth
+    button .w.harmonic_minor -text "harmonic minor" -command "verify_scale harmonic_minor" -width $butwidth
+    button .w.natural_minor -text "natural minor" -command "verify_scale natural_minor" -width $butwidth
+    button .w.melodic_minor -text "melodic minor" -command "verify_scale melodic_minor" -width $butwidth
+    button .w.blues -text blues -command "verify_scale blues" -width $butwidth
+    button .w.bebop -text bebop -command "verify_scale bebop" -width $butwidth
+    button .w.hungarian -text hungarian -command "verify_scale hungarian" -width $butwidth
+    button .w.whole_tone -text "whole tone" -command "verify_scale whole_tone" -width $butwidth
+    button .w.pentatonic_maj -text "maj pentatonic" -command "verify_scale pentatonic_maj" -width $butwidth
+    button .w.pentatonic_sus -text "sus pentatonic" -command "verify_scale pentatonic_sus" -width $butwidth
+    button .w.man_gong -text "man gong" -command "verify_scale man_gong" -width $butwidth
+    button .w.ritusen -text ritusen -command "verify_scale ritusen" -width $butwidth
+    button .w.pentatonic_min -text "min pentatonic" -command "verify_scale pentatonic_min" -width $butwidth
+    button .w.neapolitan -text neapolitan -command "verify_scale neapolitan" -width $butwidth
+
+    button .w.pacn -text "perfect authentic" -command "verify_cadence pacn" -width $butwidth
+    button .w.iacn -text "imperfect authentic" -command "verify_cadence iacn" -width $butwidth
+    button .w.hcn -text "half cadence" -command "verify_cadence hcn" -width $butwidth
+    button .w.pcn -text "plagal cadence" -command "verify_cadence pcn" -width $butwidth
+    button .w.dcn -text "deceptive cadence" -command "verify_cadence dcn" -width $butwidth
+#end of testframe buttons
+}
+
+
 proc make_interface {} {
     global trainer
     global allintervals
@@ -1066,14 +1152,10 @@ proc make_interface {} {
     global sofa_lesson
 
     set deg "\u00B0"
-    set butwidth 16
     set ww {-width 12}
     # control frame
     frame .f -borderwidth 3 -relief sunken
     pack .f -side top
-    # intervals or chords
-    frame .w -borderwidth 3 -relief sunken
-    pack .w -side bottom -after .f
     # setup exercise menubutton
     eval menubutton .f.exercise -text $lang(exercise) -menu .f.exercise.menu\
             -takefocus 0 $ww -padx 8
@@ -1116,6 +1198,7 @@ proc make_interface {} {
     eval button .f.repeat -text $lang(repeat) -command  repeat  -takefocus 0 $ww
     eval button .f.config -text $lang(config) -command make_config \
             -takefocus 0 $ww
+    label .f.ans -text ""
     
     
     # create lesson menus
@@ -1259,80 +1342,7 @@ proc make_interface {} {
     grid .f.response .f.submit .f.musicscale -row 3
     
     # test frame
-    button .w.maj -text maj  -command "verify_chord maj" -width $butwidth
-    button .w.majinv1 -text "majinv1" -command "verify_chord majinv1" -width $butwidth
-    button .w.majinv2 -text "majinv2" -command "verify_chord majinv2" -width $butwidth
-    button .w.min -text minor -command "verify_chord min" -width $butwidth
-    button .w.mininv1 -text "mininv1" -command "verify_chord mininv1" -width $butwidth
-    button .w.mininv2 -text "mininv2" -command "verify_chord mininv2" -width $butwidth
-    button .w.aug -text aug -command "verify_chord aug" -width $butwidth
-    button .w.auginv1 -text auginv1 -command "verify_chord auginv1" -width $butwidth
-    button .w.auginv2 -text auginv2 -command "verify_chord auginv2" -width $butwidth
-    button .w.dim -text dim -command "verify_chord dim" -width $butwidth
-    button .w.diminv1 -text diminv1 -command "verify_chord diminv1" -width $butwidth
-    button .w.diminv2 -text diminv2 -command "verify_chord diminv2" -width $butwidth
-    button .w.majmin -text majmin -command "verify_chord majmin" -width $butwidth
-    button .w.majmininv1 -text majmininv1 -command "verify_chord majmininv1" -width $butwidth
-    button .w.majmininv2 -text majmininv2 -command "verify_chord majmininv2" -width $butwidth
-    button .w.majmininv3 -text majmininv3 -command "verify_chord majmininv3" -width $butwidth
-    button .w.maj7 -text maj7 -command "verify_chord maj7" -width $butwidth
-    button .w.maj7inv1 -text maj7inv1 -command "verify_chord maj7inv1" -width $butwidth
-    button .w.maj7inv2 -text maj7inv2 -command "verify_chord maj7inv2" -width $butwidth
-    button .w.maj7inv3 -text maj7inv3 -command "verify_chord maj7inv3" -width $butwidth
-    button .w.min7 -text min7 -command "verify_chord min7" -width $butwidth
-    button .w.min7inv1 -text min7inv1 -command "verify_chord min7inv1" -width $butwidth
-    button .w.min7inv2 -text min7inv2 -command "verify_chord min7inv2" -width $butwidth
-    button .w.min7inv3 -text min7inv3 -command "verify_chord min7inv3" -width $butwidth
-    button .w.halfdim7 -text halfdim7 -command "verify_chord halfdim7" -width $butwidth
-    button .w.halfdim7inv1 -text halfdim7inv1 -command "verify_chord halfdim7inv1" -width $butwidth
-    button .w.halfdim7inv2 -text halfdim7inv2 -command "verify_chord halfdim7inv2" -width $butwidth
-    button .w.halfdim7inv3 -text halfdim7inv3 -command "verify_chord halfdim7inv3" -width $butwidth
-    button .w.dim7 -text dim7 -command "verify_chord dim7" -width $butwidth
-    button .w.dim7inv1 -text dim7inv1 -command "verify_chord dim7inv1" -width $butwidth
-    button .w.dim7inv2 -text dim7inv2 -command "verify_chord dim7inv2" -width $butwidth
-    button .w.dim7inv3 -text dim7inv3 -command "verify_chord dim7inv3" -width $butwidth
-    button .w.aug7 -text aug7 -command "verify_chord aug7" -width $butwidth
-    button .w.aug7inv1 -text aug7inv1 -command "verify_chord aug7inv1" -width $butwidth
-    button .w.aug7inv2 -text aug7inv2 -command "verify_chord aug7inv2" -width $butwidth
-    button .w.aug7inv3 -text aug7inv3 -command "verify_chord aug7inv3" -width $butwidth
-    label .f.ans -text ""
-
-    button .w.ionian -text ionian -command "verify_scale ionian" -width $butwidth
-    button .w.major -text "major (ionian)" -command "verify_scale major" -width $butwidth
-    button .w.dorian -text dorian -command "verify_scale dorian" -width $butwidth
-    button .w.phrygian -text phrygian -command "verify_scale phrygian" -width $butwidth
-    button .w.lydian -text lydian -command "verify_scale lydian" -width $butwidth
-    button .w.mixolydian -text mixolydian -command "verify_scale mixolydian" -width $butwidth
-    button .w.aeolian -text aeolian -command "verify_scale aeolian" -width $butwidth
-    button .w.locrian -text locrian -command "verify_scale locrian" -width $butwidth
-    button .w.harmonic_minor -text "harmonic minor" -command "verify_scale harmonic_minor" -width $butwidth
-    button .w.natural_minor -text "natural minor" -command "verify_scale natural_minor" -width $butwidth
-    button .w.melodic_minor -text "melodic minor" -command "verify_scale melodic_minor" -width $butwidth
-    button .w.blues -text blues -command "verify_scale blues" -width $butwidth
-    button .w.bebop -text bebop -command "verify_scale bebop" -width $butwidth
-    button .w.hungarian -text hungarian -command "verify_scale hungarian" -width $butwidth
-    button .w.whole_tone -text "whole tone" -command "verify_scale whole_tone" -width $butwidth
-    button .w.pentatonic_maj -text "maj pentatonic" -command "verify_scale pentatonic_maj" -width $butwidth
-    button .w.pentatonic_sus -text "sus pentatonic" -command "verify_scale pentatonic_sus" -width $butwidth
-    button .w.man_gong -text "man gong" -command "verify_scale man_gong" -width $butwidth
-    button .w.ritusen -text ritusen -command "verify_scale ritusen" -width $butwidth
-    button .w.pentatonic_min -text "min pentatonic" -command "verify_scale pentatonic_min" -width $butwidth
-    button .w.neapolitan -text neapolitan -command "verify_scale neapolitan" -width $butwidth
-
-    button .w.pacn -text "perfect authentic" -command "verify_cadence pacn" -width $butwidth
-    button .w.iacn -text "imperfect authentic" -command "verify_cadence iacn" -width $butwidth
-    button .w.hcn -text "half cadence" -command "verify_cadence hcn" -width $butwidth
-    button .w.pcn -text "plagal cadence" -command "verify_cadence pcn" -width $butwidth
-    button .w.dcn -text "deceptive cadence" -command "verify_cadence dcn" -width $butwidth
-
-
     
-    set i 0
-    foreach intvl $allintervals {
-        set interval($intvl) $i
-        incr i
-        button .w.$intvl -text $lang($intvl) -width 8 -command "verify_interval $intvl"
-    }
     
     foreach intvl $allintervals space $intervalspaces {
         set keyspace($intvl) $space
@@ -1484,6 +1494,7 @@ proc setup_exercise_interface {exercise} {
     pack forget .k
     #pack forget .dorayme
     destroy .dorayme
+    destroy .w
     pack forget .doraysing
     pack forget .rhythm
     pack forget .drumenu
@@ -1495,17 +1506,13 @@ proc setup_exercise_interface {exercise} {
     grid forget .f.fast .f.slow .f.test
     if {[winfo exist .ownlesson]} {destroy .ownlesson}
     deactivate_cmplx_checkbutton 
+    make_testframe_buttons 
     remove_scale_buttons
     remove_cadence_buttons
     remove_interval_buttons
     remove_chord_buttons
     if {$trainer(exercise) == "chords" ||
         $trainer(exercise) == "chordsdia"} {
-        frame .s
-        label .s.l -text ""
-        canvas .s.c -width 120 -height 140 
-        pack .s.c .s.l -side left 
-        pack .s -side bottom
         set n [llength $trainer(chordtypes)]
         set m [expr $n/2]
         if {[expr $n % 2] == 1} {incr m}
@@ -1678,10 +1685,6 @@ proc setup_exercise_interface {exercise} {
         pack forget .f
         pack .f -side top
         pack .k -after .f -side bottom
-        frame .s
-        canvas .s.c -width 140 -height 90
-        pack .s.c
-        pack .s
         .f.ans configure -text $lang(idkeysig)
         .f.giveup configure -command reveal_keysig
         set keysf 0
@@ -1712,6 +1715,7 @@ proc setup_exercise_interface {exercise} {
 
     if {$trainer(exercise) == "prog"} {
        .f.ans configure -text $lang(prog)
+       .f.giveup configure -command reveal_progression
        place_chordprog_buttons 
     }
     
@@ -3375,10 +3379,19 @@ proc test_chord {} {
 
 proc test_progression {} {
 global chordprogressions
+global pickedprogression
+global progchordlist
+global trainer
+.pr.0 configure  -text ""
 set n [random_number 10]
-set progchordlist [makeprogression $chordprogressions($n) 48] 
-draw_progression $progchordlist
-playprogression $progchordlist
+set pickedprogression $chordprogressions($n)
+set progchordlist [makeprogression $pickedprogression 48]
+if {$trainer(testmode) == "visual" || $trainer(testmode) == "both"} {
+        draw_progression $progchordlist}
+if {$trainer(testmode) == "aural" || $trainer(testmode) == "both"} {
+        playprogression $progchordlist }
+#draw_progression $progchordlist
+#playprogression $progchordlist
 }
 
 proc test_scalesid {} {
@@ -3454,7 +3467,12 @@ proc show_interval {troot ttype tdir} {
 
 proc draw_interval {note1 note2 clefcode} {
     set chordsym ""
-    pack .s -side bottom -after .f
+if {![winfo exist .s]} {
+    frame .s
+    canvas .s.c -width 140 -height 140
+    pack .s.c -anchor nw
+    pack .s -side top -anchor nw
+ }
     grand_canvas_redraw .s.c 130
     show_chord_in_grand_staff "$note1 $note2"
 }
@@ -3726,6 +3744,7 @@ proc repeat {} {
     global nrepeats
     global chordseq
     global test_cadence
+    global progchordlist
     incr nrepeats
     switch $trainer(exercise) {
     "rhythmdic" {
@@ -3746,6 +3765,7 @@ proc repeat {} {
         playcadence $troot  $test_cadence }
         }
     "drumseq" start_playseq
+    "prog" {playprogression $progchordlist}
      }
 }
 
@@ -4096,6 +4116,10 @@ global cadencename
 .f.ans configure -text $lang($cadencename)
 }
 
+proc reveal_progression {} {
+global pickedprogression
+.f.ans configure -text $pickedprogression
+}
 # Part 26.0 rhythm support
 
 
@@ -6810,7 +6834,13 @@ proc make_keysiglist {mode} {
 
 
 proc draw_keysig {sf clefcode} {
-    pack .s -side bottom -after .f
+if {![winfo exist .s]} {
+    frame .s
+    canvas .s.c -width 140 -height 80
+    label .s.l
+    pack .s.c -anchor nw
+    pack .s .s.l -side top -anchor nw
+ }
     canvas_redraw .s.c 90
     put_clef $clefcode .s.c
     key_signature $sf 0 30 $clefcode .s.c
@@ -7003,6 +7033,13 @@ proc grand_canvas_redraw {musicframe width} {
     # redraw the first elements of the canvas
     global score
     # clear the canvas
+if {![winfo exist .s]} {
+    frame .s
+    canvas .s.c -width 140 -height 120
+    label .s.l
+    pack .s.c -anchor nw
+    pack .s .s.l -side top -anchor nw
+ }
     $musicframe delete all
     # create the voice rectangle, the staves and the cursor rectangle
     set voicerect [$musicframe create rectangle 5 10 \
@@ -7855,7 +7892,7 @@ set progchordlist {}
 global romansymbols2midi
 foreach roman $progr {
   set shift $romansymbols2midi($roman)
-  puts "makeprogression roman = $roman shift = $shift"
+  #puts "makeprogression roman = $roman shift = $shift"
   set octaveshift [expr [random_number 2]*12]
   if {$shift > 5} {
     set shiftedroot [expr $root - $octaveshift]
@@ -7863,10 +7900,10 @@ foreach roman $progr {
     set shiftedroot $root
   }
   set chordlist [roman2chordlist $roman $shiftedroot]
-  puts "$roman $chordlist $octaveshift"
+  #puts "$roman $chordlist $octaveshift"
   lappend progchordlist $chordlist
   }
-puts "progchordlist = $progchordlist"
+#puts "progchordlist = $progchordlist"
 return $progchordlist
 }
 
@@ -7910,7 +7947,7 @@ foreach prog $progchordlist {
     }
   lappend keyprogression $keychord
   }
-  puts "draw_progression $progchordlist $keyprogression"
+  #puts "draw_progression $progchordlist $keyprogression"
   grand_canvas_redraw .s.c 160
   pack .s.c
   pack .s
@@ -7939,6 +7976,19 @@ foreach fig $romansymbolslist {
   incr i
   }
 }
+
+#proc place_chordprog_buttons {} {
+#global romansymbolslist
+#label .w.0 -width 12 -relief groove -text ""
+#pack .w -side top
+#pack .w.0 -side left
+#set i 1
+#foreach fig $romansymbolslist {
+#  button .w.$i -text $fig -command "append_roman $fig"
+#  pack .w.$i -side left
+#  incr i
+#  }
+#}
 
 proc append_roman {fig} {
 global romanresponse
