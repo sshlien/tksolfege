@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.87 2025-08-13 10.25"
+set tksolfegeversion "1.87 2025-08-14 15.25"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -103,6 +103,8 @@ wm title . $tksolfege_title
 
 # english texts for tksolfege
 array set lang {
+    1stinv {first inversion}
+    2ndinv {second inversion}
     accent  {beat accent level}
     accuracy {accuracy}
     already {you already have}
@@ -177,6 +179,7 @@ array set lang {
     phr {phrygian}
     picklesson {please choose lesson first}
     pitch   {MIDI pitch}
+    plain {plain}
     prog {progressions}
     random {random}
     repeat	{repeat}
@@ -612,6 +615,7 @@ set trainer(testmode) aural
 set trainer(mode) maj
 set trainer(key) C
 set trainer(chordroot) 48
+set trainer(chordinversion) 0
 
 #window geometry
 set trainer(.) ""
@@ -700,6 +704,7 @@ proc write_ini_file {filename} {
     puts $handle "rndrums $trainer(rndrums)"
     puts $handle "rrepeats $trainer(rrepeats)"
     puts $handle "chordroot $trainer(chordroot)"
+    puts $handle "chordinversion $trainer(chordinversion)"
     puts $handle ". $trainer(.)"
     puts $handle ".config $trainer(.config)"
     puts $handle ".ownlesson $trainer(.ownlesson)"
@@ -2214,12 +2219,19 @@ proc make_config_progression {} {
             -value visual 
     radiobutton $w.2ways -text $lang(both) -variable trainer(testmode)\
             -value both
+    radiobutton $w.plain -text $lang(plain) -variable trainer(chordinversion)\
+            -value aural
+    radiobutton $w.inv1 -text $lang(1stinv) -variable trainer(chordinversion)\
+            -value visual 
+    radiobutton $w.inv2 -text $lang(2ndinv) -variable trainer(chordinversion)\
+            -value both
     grid $w.instrlab $w.instrbut
     grid $w.pitch $w.pitchsca 
     grid $w.instrlab $w.instrbut
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
     grid $w.aural $w.visual $w.2ways
+    grid $w.plain $w.inv1 $w.inv2
     }
 
 
@@ -3416,6 +3428,19 @@ proc test_chord {} {
     set test_time [clock seconds]
 }
 
+proc make_inversion {progchordlist} {
+  set newprogchordlist [list]
+  foreach chord $progchordlist {
+    set ichord {}
+    for {set i 1} {$i < 3} {incr i} {
+      lappend ichord [lindex $chord $i]
+      }
+    lappend ichord [expr 12 + [lindex $chord 0]]
+    lappend newprogchordlist $ichord
+    }
+  return $newprogchordlist
+ } 
+
 proc test_progression {} {
 global chordprogressions
 global pickedprogression
@@ -3424,6 +3449,12 @@ global trainer
 set n [random_number 10]
 set pickedprogression $chordprogressions($n)
 set progchordlist [makeprogression $pickedprogression $trainer(chordroot)]
+if {$trainer(chordinversion) > 0} {
+   set progchordlist [make_inversion $progchordlist]
+   }
+if {$trainer(chordinversion) > 1} {
+   set progchordlist [make_inversion $progchordlist]
+   }
 if {$trainer(testmode) == "visual" || $trainer(testmode) == "both"} {
         draw_progression $progchordlist}
 if {$trainer(testmode) == "aural" || $trainer(testmode) == "both"} {
@@ -8019,9 +8050,15 @@ for {set i 0} {$i < $nprogs} {incr i 3} {
 }
 
 proc display_progression {} {
-global pickedprogression
+global selectedprogression
 global trainer
-set progchordlist [makeprogression $pickedprogression $trainer(chordroot)]
+set progchordlist [makeprogression $selectedprogression $trainer(chordroot)]
+if {$trainer(chordinversion) > 0} {
+   set progchordlist [make_inversion $progchordlist]
+   }
+if {$trainer(chordinversion) > 1} {
+   set progchordlist [make_inversion $progchordlist]
+   }
 draw_progression $progchordlist
 }
 
@@ -8034,6 +8071,12 @@ if {![info exist selectedprogression]} {
   return
   }
 set progchordlist [makeprogression $selectedprogression $trainer(chordroot)]
+if {$trainer(chordinversion) > 0} {
+   set progchordlist [make_inversion $progchordlist]
+   }
+if {$trainer(chordinversion) > 1} {
+   set progchordlist [make_inversion $progchordlist]
+   }
 playprogression $progchordlist 
 }
 
