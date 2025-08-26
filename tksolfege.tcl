@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.87 2025-08-14 15.25"
+set tksolfegeversion "1.88 2025-08-26 10.15"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -616,6 +616,7 @@ set trainer(mode) maj
 set trainer(key) C
 set trainer(chordroot) 48
 set trainer(chordinversion) 0
+set trainer(proglesson) 0
 
 #window geometry
 set trainer(.) ""
@@ -705,6 +706,7 @@ proc write_ini_file {filename} {
     puts $handle "rrepeats $trainer(rrepeats)"
     puts $handle "chordroot $trainer(chordroot)"
     puts $handle "chordinversion $trainer(chordinversion)"
+    puts $handle "proglesson $trainer(proglesson)"
     puts $handle ". $trainer(.)"
     puts $handle ".config $trainer(.config)"
     puts $handle ".ownlesson $trainer(.ownlesson)"
@@ -919,6 +921,17 @@ set sofa_lesson(7) {la, ti, do re mi}
 set sofa_lesson(8) {ti, do re mi fa so}
 set sofa_lesson(9) {la, ti, do re mi fa so}
 set sofa_lesson(10) {la, ti, do re mi fa so la}
+
+set progression_lesson(0) {0 1 2}
+set progression_lesson(1) {0 1 2 3}
+set progression_lesson(2) {4 5 6}
+set progression_lesson(3) {3 4 5 6}
+set progression_lesson(4) {7 8 9}
+set progression_lesson(5) {7 8 9 10}
+set progression_lesson(6) {9 10 11}
+set progression_lesson(7) {0 1 2 3 4 5}
+set progression_lesson(8) {6 7 8 9 10 11}
+set progression_lesson(9) {0 1 2 3 4 5 6 7 8 9 10 11}
 
 
 # Part 7.0  random support
@@ -1149,6 +1162,7 @@ proc make_interface {} {
     global instructions
     global lang
     global chordlesson intervallesson duplerhythmlesson compoundrhythmlesson
+    global progression_lesson
     global diatoniclesson
     global rseed
     global modescalechords roman
@@ -1197,6 +1211,8 @@ proc make_interface {} {
             -command "setup_exercise_interface rhythmdic"
     $v add radiobutton -label $lang(drumseq) \
             -command "setup_exercise_interface drumseq"
+    $v add radiobutton -label $lang(prog) \
+            -command "setup_exercise_interface progression"
     $v add radiobutton -label $lang(settings) \
             -command "advance_settings_config"
     
@@ -1254,9 +1270,7 @@ proc make_interface {} {
     
     set v .f.lessmenu.compoundrhythms
     menu $v -tearoff 0
-    for {set i 0} {$i < 8} {incr i} {
         $v add radiobutton -label "$lang(level) $i" -command "select_rhythm_lesson $i"
-    }
     $v add radiobutton -label $lang(duple) -command {
         set trainer(timesigtype) 0
         rhythm_switch_type
@@ -1269,6 +1283,12 @@ proc make_interface {} {
         $v add radiobutton -label "$sofa_lesson($i)" -command "select_sofa_lesson $i"
     }
     $v add radiobutton -label "$lang(yourown)" -command config_your_own_sofa_lesson
+
+    set v .f.lessmenu.progression
+    menu $v -tearoff 0
+    for {set i 0} {$i < 10} {incr i} {
+        $v add radiobutton -label $progression_lesson($i) -command "select_progression_lesson $i"
+        }
 
     set v .f.lessmenu.scales
     menu $v -tearoff 0
@@ -1615,6 +1635,9 @@ proc setup_exercise_interface {exercise} {
 
 
     }
+
+
+
     if {$trainer(exercise) == "rhythmdic"} {
         .f.giveup configure -command show_rhythm_answer
         pack forget .f
@@ -1723,6 +1746,7 @@ proc setup_exercise_interface {exercise} {
     if {$trainer(exercise) == "prog"} {
        .f.ans configure -text $lang(prog)
        .f.giveup configure -command reveal_progression
+       .f.lessmenu configure -menu .f.lessmenu.progression
        #place_chordprog_buttons 
        place_progressions_buttons 
        add_progression_functions 
@@ -2220,11 +2244,11 @@ proc make_config_progression {} {
     radiobutton $w.2ways -text $lang(both) -variable trainer(testmode)\
             -value both
     radiobutton $w.plain -text $lang(plain) -variable trainer(chordinversion)\
-            -value aural
+            -value 0
     radiobutton $w.inv1 -text $lang(1stinv) -variable trainer(chordinversion)\
-            -value visual 
+            -value 1 
     radiobutton $w.inv2 -text $lang(2ndinv) -variable trainer(chordinversion)\
-            -value both
+            -value 2
     grid $w.instrlab $w.instrbut
     grid $w.pitch $w.pitchsca 
     grid $w.instrlab $w.instrbut
@@ -3363,6 +3387,12 @@ proc random_number {top} {
     return $n
 }
 
+proc random_element {givenlist} {
+set l [llength $givenlist]
+set n [random_number $l]
+return [lindex $givenlist $n]
+}
+
 proc next_test {} {
     global trainer
     global nrepeats
@@ -3445,10 +3475,12 @@ proc test_progression {} {
 global chordprogressions
 global pickedprogression
 global progchordlist
+global progression_lesson
 global trainer
-set n [random_number 10]
+set n [random_element $progression_lesson($trainer(proglesson))]
 set pickedprogression $chordprogressions($n)
 set progchordlist [makeprogression $pickedprogression $trainer(chordroot)]
+#puts "trainer(chordinversion) = $trainer(chordinversion)"
 if {$trainer(chordinversion) > 0} {
    set progchordlist [make_inversion $progchordlist]
    }
@@ -3462,6 +3494,7 @@ if {$trainer(testmode) == "aural" || $trainer(testmode) == "both"} {
 if {$trainer(testmode) == "aural"} {destroy .s}
 #draw_progression $progchordlist
 #playprogression $progchordlist
+clear_selected_progressions 
 }
 
 proc test_scalesid {} {
@@ -7960,6 +7993,7 @@ if {[string is lower [string index $roman 0]]} {
 proc makeprogression {progr root} {
 set progchordlist {}
 global romansymbols2midi
+#puts "makeprogression: progr = $progr root = $root"
 foreach roman $progr {
   set shift $romansymbols2midi($roman)
   #puts "makeprogression roman = $roman shift = $shift"
@@ -8034,18 +8068,22 @@ global romanresponse
 
 proc place_progressions_buttons {} {
 global chordprogressions
+global progression_lesson
+global trainer
 set p .proginterface
 destroy $p 
 frame $p
 pack $p -side top
 set nprogs 12
-for {set i 0} {$i < $nprogs} {incr i 3} {
-  button $p.$i -text  $chordprogressions($i) -command "verify_progression $i"
-  set i1 [expr $i + 1]
-  set i2 [expr $i + 2]
-  button $p.$i1 -text $chordprogressions($i1) -command "verify_progression $i1"
-  button $p.$i2 -text $chordprogressions($i2) -command "verify_progression $i2"
-  grid $p.$i $p.$i1 $p.$i2
+set progex $progression_lesson($trainer(proglesson))
+set j 0
+for {set i 0} {$i < $nprogs} {incr i } {
+  if {[lsearch $progex $i] < 0} continue
+  button $p.$j -text  $chordprogressions($i) -command "verify_progression $j"
+  set c [expr $j % 4] 
+  set r [expr $j/4]
+  grid $p.$j -column $c -row $r
+  incr j
   }
 }
 
@@ -8087,26 +8125,49 @@ button $p.play -text play -width 7 -command play_selectedprogression
 grid  $p.display $p.play
 }
 
+proc clear_selected_progressions {} {
+set p .proginterface
+for {set i 0} {$i < 12} {incr i} {
+  if {![winfo exist $p.$i] } break
+  $p.$i configure -bd 1
+  }
+}
+
+
 proc verify_progression {j} {
 global lang
 global pickedprogression
 global chordprogressions
 global selectedprogression
+global progression_lesson
+global trainer
+global proglesson
 set p .proginterface
-set selectedprogression $chordprogressions($j)
-for {set i 0} {$i < 12} {incr i} {
-  $p.$i configure -bd 1
-  }
+set progex $progression_lesson($trainer(proglesson))
+set i [lindex $progex $j]
+#puts "verify_progression: $progex"
+#puts "verify_progression $i"
+clear_selected_progressions
 $p.$j configure -bd 5
 if {![info exist pickedprogression]}  {
         .f.ans config -text $lang(firstpress)
         return
     }
-if {$chordprogressions($j) == $pickedprogression} {
+set selectedprogression $chordprogressions($i)
+#puts "pickedprogression = $pickedprogression selectedprogression = $selectedprogression"
+if {$chordprogressions($i) == $pickedprogression} {
   .f.ans configure -text  $lang(correct)
   } else {
   .f.ans configure -text $lang(try) 
   }
+}
+
+proc select_progression_lesson {j} {
+global progression_lesson
+global trainer
+set trainer(proglesson) $j
+puts "select_progression_lesson: $progression_lesson($j)"
+place_progressions_buttons 
 }
 
 #end of Part 38.0
