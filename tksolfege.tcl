@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.88 2025-08-26 10.15"
+set tksolfegeversion "1.90 2025-08-31 09.58"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -559,9 +559,11 @@ global tcl_platform
 if {$tcl_platform(os) == "Linux"} {
 	set trainer(fluidsynth_path) /usr/bin/fluidsynth
 	set trainer(audio_driver) pulseaudio
+        set trainer(browser) "/usr/bin/firefox"
    } else {
     set trainer(fluidsynth_path) fluidsynth.exe
     set trainer(audio_driver) waveout
+    set trainer(browser) " C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
     }
 set trainer(version) $tksolfegeversion
 set trainer(top) ""
@@ -617,6 +619,7 @@ set trainer(key) C
 set trainer(chordroot) 48
 set trainer(chordinversion) 0
 set trainer(proglesson) 0
+
 
 #window geometry
 set trainer(.) ""
@@ -707,6 +710,7 @@ proc write_ini_file {filename} {
     puts $handle "chordroot $trainer(chordroot)"
     puts $handle "chordinversion $trainer(chordinversion)"
     puts $handle "proglesson $trainer(proglesson)"
+    puts $handle "browser $trainer(browser)"
     puts $handle ". $trainer(.)"
     puts $handle ".config $trainer(.config)"
     puts $handle ".ownlesson $trainer(.ownlesson)"
@@ -756,11 +760,21 @@ proc pick_language_pack {} {
 
 proc pick_soundfont {} {
 global trainer lang
-set openfile [tk_getOpenFile -filetypes {{soundfont {*.sf2}}}]
+set filedir [file dirname $trainer(soundfont)]
+set openfile [tk_getOpenFile -initialdir $filedir -filetypes {{soundfont {*.sf2}}}]
 if {[string length $openfile] > 0} {
     set trainer(soundfont) $openfile
   } else {set trainer(soundfont) none}
 tk_messageBox -type ok -icon info -message $lang(restart)
+}
+
+proc pick_browser {} {
+global trainer lang
+set filedir [file dirname $trainer(browser)]
+set openfile [tk_getOpenFile -initialdir $filedir ]
+if {[string length $openfile] > 0} {
+    set trainer(browser) $openfile
+  } else {set trainer(soundfont) none}
 }
 
 
@@ -1211,8 +1225,6 @@ proc make_interface {} {
             -command "setup_exercise_interface rhythmdic"
     $v add radiobutton -label $lang(drumseq) \
             -command "setup_exercise_interface drumseq"
-    $v add radiobutton -label $lang(prog) \
-            -command "setup_exercise_interface progression"
     $v add radiobutton -label $lang(settings) \
             -command "advance_settings_config"
     
@@ -1335,8 +1347,8 @@ proc make_interface {} {
         "idcad" { .f.lessmenu configure -menu .f.lessmenu.cadence }
         }
  
-    eval button .f.help -text $lang(help) -takefocus 0 $ww\
-            {-command {helpwindow $instructions}}
+    button .f.help -text $lang(help) -takefocus 0 -width 12\
+            -command helpwindow 
     eval button .f.new -text $lang(new) -command next_test  -takefocus 0 $ww
     eval button .f.stats -text $lang(stats) -takefocus 0 $ww\
             -command make_stats_window
@@ -3006,7 +3018,13 @@ proc reset_rhythm_melody_stats {{dummy 0}} {
     set ncorrect 0
 }
 
-proc helpwindow {textfile} {
+proc helpwindow {} {
+   global trainer
+   global instructions
+   if { [file exist $trainer(browser)]} {
+        set cmd "exec [list $trainer(browser)] https://tksolfege.sourceforge.io"
+        eval $cmd
+        } else {
     if {[winfo exists .help] != 0} {
         destroy .help
     }
@@ -3016,8 +3034,9 @@ proc helpwindow {textfile} {
     scrollbar .help.ysbar -orient vertical -command {.help.t yview}
     pack .help.ysbar -side right -fill y -in .help
     pack .help.t -in .help
-    .help.t insert end $textfile
+    .help.t insert end $instructions
     .help.t configure -state disabled
+    }
 }
 
 
@@ -7224,6 +7243,8 @@ if {![winfo exist .advanced]} {toplevel .advance
    entry $w.audiodrv -textvariable trainer(audio_driver) -width 40
    button $w.sf -text $lang(soundfont) -command pick_soundfont
    entry $w.sfe -textvar trainer(soundfont) -width 40
+   button $w.brlab -text browser -command pick_browser
+   entry $w.bre -textvar trainer(browser) -width 40
    button $w.langb -text $lang(language) -command pick_language_pack
    label $w.rep -text $lang(repeatability)
    checkbutton $w.repchk  -variable trainer(repeatability) -command restart
@@ -7232,6 +7253,7 @@ if {![winfo exist .advanced]} {toplevel .advance
    grid $w.fluidlab $w.fluidpath
    grid $w.audiolab $w.audiodrv
    grid $w.sf $w.sfe
+   grid $w.brlab $w.bre
    grid $w.langb
    grid $w.rep $w.repchk
    grid $w.msg -columnspan 2
@@ -7998,7 +8020,7 @@ foreach roman $progr {
   set shift $romansymbols2midi($roman)
   #puts "makeprogression roman = $roman shift = $shift"
   set octaveshift 12
-  if {$shift > 5} {
+  if {$shift >= 5} {
     set shiftedroot [expr $root - $octaveshift]
   } else {
     set shiftedroot $root
