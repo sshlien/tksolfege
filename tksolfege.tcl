@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.90 2025-08-31 09.58"
+set tksolfegeversion "1.91 2025-09-03 15.00"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -619,6 +619,7 @@ set trainer(key) C
 set trainer(chordroot) 48
 set trainer(chordinversion) 0
 set trainer(proglesson) 0
+set trainer(shiftedchord) 0
 
 
 #window geometry
@@ -711,6 +712,7 @@ proc write_ini_file {filename} {
     puts $handle "chordinversion $trainer(chordinversion)"
     puts $handle "proglesson $trainer(proglesson)"
     puts $handle "browser $trainer(browser)"
+    puts $handle "shiftedchord $trainer(shiftedchord)"
     puts $handle ". $trainer(.)"
     puts $handle ".config $trainer(.config)"
     puts $handle ".ownlesson $trainer(.ownlesson)"
@@ -2261,11 +2263,18 @@ proc make_config_progression {} {
             -value 1 
     radiobutton $w.inv2 -text $lang(2ndinv) -variable trainer(chordinversion)\
             -value 2
+    radiobutton  $w.melodic -text $lang(melodic)  -variable trainer(playmode) \
+            -value melodic
+    radiobutton $w.harmonic -text $lang(harmonic)  -variable trainer(playmode) \
+            -value harmonic
+    checkbutton $w.shift -text "shift chord" -variable trainer(shiftedchord)
     grid $w.instrlab $w.instrbut
     grid $w.pitch $w.pitchsca 
     grid $w.instrlab $w.instrbut
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
+    grid $w.harmonic $w.melodic
+    grid $w.shift
     grid $w.aural $w.visual $w.2ways
     grid $w.plain $w.inv1 $w.inv2
     }
@@ -8015,12 +8024,13 @@ if {[string is lower [string index $roman 0]]} {
 proc makeprogression {progr root} {
 set progchordlist {}
 global romansymbols2midi
+global trainer
 #puts "makeprogression: progr = $progr root = $root"
 foreach roman $progr {
   set shift $romansymbols2midi($roman)
   #puts "makeprogression roman = $roman shift = $shift"
   set octaveshift 12
-  if {$shift >= 5} {
+  if {$shift >= 5 && $trainer(shiftedchord)} {
     set shiftedroot [expr $root - $octaveshift]
   } else {
     set shiftedroot $root
@@ -8080,8 +8090,9 @@ foreach prog $progchordlist {
 }   
 
 proc playprogression {progchordlist} {
+global trainer
 foreach prog $progchordlist {
-   playchord $prog harmonic
+   playchord $prog $trainer(playmode)
   }
 }
 
