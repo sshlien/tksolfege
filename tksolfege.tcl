@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.91 2025-09-03 15.00"
+set tksolfegeversion "1.92 2025-09-09 15.02"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -1763,7 +1763,6 @@ proc setup_exercise_interface {exercise} {
        .f.lessmenu configure -menu .f.lessmenu.progression
        #place_chordprog_buttons 
        place_progressions_buttons 
-       add_progression_functions 
     }
     
     if {$trainer(exercise) == "idfigbas"} {
@@ -2268,13 +2267,14 @@ proc make_config_progression {} {
     radiobutton $w.harmonic -text $lang(harmonic)  -variable trainer(playmode) \
             -value harmonic
     checkbutton $w.shift -text "shift chord" -variable trainer(shiftedchord)
+    checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     grid $w.instrlab $w.instrbut
     grid $w.pitch $w.pitchsca 
     grid $w.instrlab $w.instrbut
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
     grid $w.harmonic $w.melodic
-    grid $w.shift
+    grid $w.shift $w.autonew
     grid $w.aural $w.visual $w.2ways
     grid $w.plain $w.inv1 $w.inv2
     }
@@ -2799,6 +2799,7 @@ proc make_stats_window {} {
        "idcad" {display_cadence_stats}
        "drumseq" {display_drum_stats}
        "sofabadnote" {display_badnote_stats}
+       "prog" {display_prog_stats}
        }
 }
 
@@ -3018,6 +3019,37 @@ proc display_drum_stats {} {
   }
 
 
+proc display_prog_stats {} {
+global cmatrix
+global trainer
+global progression_lesson
+global chordprogressions
+#puts "display_prog_stats"
+#puts [array get cmatrix]
+set les $progression_lesson($trainer(proglesson))
+#puts $trainer(proglesson)
+set lles [llength $les]
+#puts "les = $les"
+for {set j 0} {$j < $lles} {incr j} {
+  set j0 [lindex $les $j]
+  #label .stats.m.c$j -text $j0
+  label .stats.m.c$j -text "$chordprogressions($j0) "
+  grid .stats.m.c$j -row 0 -column [expr $j + 1]
+  }
+  
+for {set i 0} {$i < $lles} {incr i} {
+  set i0 [lindex $les $i]
+  label .stats.m.r$i -text $chordprogressions($i0)
+  grid .stats.m.r$i -row [expr $i + 1] -column 0
+ for {set j 0} {$j < $lles} {incr j} {
+  set i0 [lindex $les $i]
+  set j0 [lindex $les $j]
+  set field $i0-$j0
+  label .stats.m.$field -text $cmatrix($field)
+  grid .stats.m.$field -row [expr $i + 1] -column [expr $j + 1]
+  }
+ }
+}
 
 
 
@@ -3505,8 +3537,9 @@ global pickedprogression
 global progchordlist
 global progression_lesson
 global trainer
-set n [random_element $progression_lesson($trainer(proglesson))]
-set pickedprogression $chordprogressions($n)
+global pickedn
+set pickedn [random_element $progression_lesson($trainer(proglesson))]
+set pickedprogression $chordprogressions($pickedn)
 set progchordlist [makeprogression $pickedprogression $trainer(chordroot)]
 #puts "trainer(chordinversion) = $trainer(chordinversion)"
 if {$trainer(chordinversion) > 0} {
@@ -4033,6 +4066,18 @@ proc zero_sofaid_confusion_matrix {} {
         }
       }
 }
+
+proc zero_prog_confusion_matrix {} {
+    global trainer
+    global cmatrix
+    global progression_lesson
+    set les $progression_lesson($trainer(proglesson))
+    foreach i $les {
+      foreach j $les {
+        set cmatrix($i-$j) 0
+        }
+      } 
+    }
 
 # Part 24.0 verification
 
@@ -8118,6 +8163,8 @@ for {set i 0} {$i < $nprogs} {incr i } {
   grid $p.$j -column $c -row $r
   incr j
   }
+add_progression_functions 
+zero_prog_confusion_matrix
 }
 
 proc display_progression {} {
@@ -8175,12 +8222,13 @@ global selectedprogression
 global progression_lesson
 global trainer
 global proglesson
+global cmatrix
+global pickedn
 set p .proginterface
 set progex $progression_lesson($trainer(proglesson))
 set i [lindex $progex $j]
-#puts "verify_progression: $progex"
-#puts "verify_progression $i"
 clear_selected_progressions
+incr cmatrix($pickedn-$i)
 $p.$j configure -bd 5
 if {![info exist pickedprogression]}  {
         .f.ans config -text $lang(firstpress)
@@ -8190,6 +8238,11 @@ set selectedprogression $chordprogressions($i)
 #puts "pickedprogression = $pickedprogression selectedprogression = $selectedprogression"
 if {$chordprogressions($i) == $pickedprogression} {
   .f.ans configure -text  $lang(correct)
+  update
+  if {$trainer(autonew)} {
+       after $trainer(autonewdelay)
+       next_test
+       } 
   } else {
   .f.ans configure -text $lang(try) 
   }
@@ -8199,7 +8252,6 @@ proc select_progression_lesson {j} {
 global progression_lesson
 global trainer
 set trainer(proglesson) $j
-puts "select_progression_lesson: $progression_lesson($j)"
 place_progressions_buttons 
 }
 
