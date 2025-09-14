@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.92 2025-09-09 15.02"
+set tksolfegeversion "1.92 2025-09-13 21.02"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -930,8 +930,8 @@ set sofa_lesson(0) {do re mi}
 set sofa_lesson(1) {do re mi fa}
 set sofa_lesson(2) {do re mi fa so}
 set sofa_lesson(3) {do re mi fa so la}
-set sofa_lesson(4) {do re mi fa so la do}
-set sofa_lesson(5) {do re mi fa so la ti do}
+set sofa_lesson(4) {do re mi fa so la do\'}
+set sofa_lesson(5) {do re mi fa so la ti do\'}
 set sofa_lesson(6) {ti, do re mi}
 set sofa_lesson(7) {la, ti, do re mi}
 set sofa_lesson(8) {ti, do re mi fa so}
@@ -5386,7 +5386,7 @@ proc setup_sofa2note {root} {
     global sharpnotesarray flatnotesarray notename
     global majseq sofa2note
     global default_sofa2note
-    set vocalizations {do re mi fa so la ti do'}
+    set vocalizations {do re mi fa so la ti do\'}
     set midipitch $root
     set root [expr $root % 12]
     #puts "setup_sofa2note $root"
