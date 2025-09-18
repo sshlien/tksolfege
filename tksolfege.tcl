@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.92 2025-09-13 21.02"
+set tksolfegeversion "1.93 2025-09-17 14.48"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -571,6 +571,8 @@ set trainer(top) ""
 set trainer(chordtypes) {maj min aug dim}
 set trainer(intervaltypes) {major3rd perfect5th octave}
 set trainer(keysigtypes) {-3 -2 -1 0 1 2 3}
+set trainer(scaletypes) {ionian dorian phrygian aeolian}
+set trainer(cadences) {pacn iacn hcn pcn dcn}
 set trainer(keysigformat) 0
 set trainer(velocity) 80
 set trainer(msec) 500
@@ -580,7 +582,8 @@ set trainer(instrument) 0
 set trainer(playmode) harmonic
 set trainer(autonew) 0
 set trainer(autoplay) 1
-set trainer(autonewdelay) 1500 
+set trainer(autonewdelay) 2000 
+set trainer(repeattonic) 1
 set trainer(range) [expr $trainer(maxpitch) - $trainer(minpitch)]
 set trainer(exercise) chords
 set trainer(direction) up
@@ -620,6 +623,15 @@ set trainer(chordroot) 48
 set trainer(chordinversion) 0
 set trainer(proglesson) 0
 set trainer(shiftedchord) 0
+set trainer(xchord) 0
+set trainer(dirdrumseq) drumseq
+set trainer(drumsrc) file
+## random drum trainer state
+set trainer(rbeats) 4
+set trainer(rres) 4
+set trainer(rarrg) 0
+set trainer(rndrums) 3
+set trainer(rrepeats) 2
 
 
 #window geometry
@@ -784,69 +796,6 @@ if {[string length $openfile] > 0} {
 initialize_trainer_array
 
 
-set trainer(chordtypes) {maj min aug dim}
-# chord types for this lesson
-
-set trainer(scaletypes) {ionian dorian phrygian aeolian}
-# scale types for this lesson
-
-set trainer(intervaltypes) {major3rd perfect5th octave}
-# interval types for this lesson
-
-set trainer(key) C
-set trainer(keysigtypes) {-3 -2 -1 0 1 2 3}
-set trainer(keysigformat) 0
-set trainer(cadences) {pacn iacn hcn pcn dcn}
-set trainer(cadence_scale) ionian
-set trainer(version) $tksolfegeversion
-set trainer(velocity) 80
-set trainer(msec) 500
-set trainer(minpitch) 36
-set trainer(maxpitch) 72
-set trainer(instrument) 0
-set trainer(playmode) harmonic
-set trainer(autonew) 0
-set trainer(autoplay) 1
-set trainer(autonewdelay) 1500
-set trainer(range) [expr $trainer(maxpitch) - $trainer(minpitch)]
-set trainer(exercise) chords
-set trainer(direction) up
-set trainer(makelog) 0
-set trainer(font) {Arial 10 bold}
-set trainer(lang) "none"
-set trainer(repeattonic) 1
-set trainer(rhythm_accent) 25
-set trainer(rhythm_beats_per_bar) 2
-set trainer(rhythm_bars) 2
-set trainer(rhythmtypes) {0 1 2 3}
-set trainer(leaderinstrument) 115
-set trainer(rhythminstrument) 0
-set trainer(rhythmpitch) 60
-set trainer(rhythmvelocity) 80
-set trainer(rhythmbpm) 60
-set trainer(timesigtype) 0
-set trainer(norest) 1
-set trainer(sofa_notes) 6
-set trainer(sofa_tonic) 48
-set trainer(smallint) 1
-set trainer(sofalesson) "do re mi"
-set trainer(lockconfig) 0
-# trainer(lockconfig)>0 does not allow writing (overwriting) tksolfege.ini
-set trainer(repeatability) 0
-set trainer(transpose) 0
-set trainer(clefcode) -1
-set trainer(melpat) 3
-set trainer(testmode) aural
-set trainer(mode) maj
-set trainer(xchord) 0
-set trainer(dirdrumseq) drumseq
-set trainer(drumsrc) file
-# random drum trainer state
-set trainer(rbeats) 4
-set trainer(rres) 4
-set trainer(rarrg) 0
-set trainer(rndrums) 3
-set trainer(rrepeats) 2
 
 if [file exists tksolfege.ini] {read_tksolfege_ini
    } else {write_ini_file tksolfege.ini;}
@@ -4147,13 +4096,13 @@ proc verify_interval {ntype} {
 }
 
 proc verify_interval_id {ntype} {
-    global troot ttype tdir
+    global ttype tdir
     global trainer
     global cmatrix
     global try test_time total_time ntrials
     global ncorrect
     global loghandle
-    global lang
+    global intervalname troot lang
     
     if {![info exist test_time] || $try == -1} {
         .f.ans config -text $lang(firstpress)"
@@ -4172,7 +4121,8 @@ proc verify_interval_id {ntype} {
     }
     if {$ntype == $ttype} {
         if {$try == 1} {incr ncorrect}
-        .f.ans configure -text $lang(correct)
+         set rootnote [midi2notename $troot]
+        .f.ans configure -text "$lang(correct) $lang($intervalname) $lang(from) $rootnote"
         incr total_time $response_time
         if {[winfo exist .stats]} {
             if {$ntrials > 1 } {
