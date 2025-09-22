@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.93 2025-09-17 14.48"
+set tksolfegeversion "1.94 2025-09-22 09:25"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -182,6 +182,8 @@ array set lang {
     plain {plain}
     prog {progressions}
     random {random}
+    newseed {new seed}
+    resetseed {reset seed}
     repeat	{repeat}
     repeatability {repeatability}
     repeats {repeats}
@@ -584,6 +586,7 @@ set trainer(autonew) 0
 set trainer(autoplay) 1
 set trainer(autonewdelay) 2000 
 set trainer(repeattonic) 1
+set trainer(rseed) 0
 set trainer(range) [expr $trainer(maxpitch) - $trainer(minpitch)]
 set trainer(exercise) chords
 set trainer(direction) up
@@ -708,6 +711,7 @@ proc write_ini_file {filename} {
     puts $handle "makelog $trainer(makelog)"
     puts $handle "lockconfig $trainer(lockconfig)"
     puts $handle "repeatability $trainer(repeatability)"
+    puts $handle "rseed $trainer(rseed)"
     puts $handle "repeattonic $trainer(repeattonic)"
     puts $handle "clefcode $trainer(clefcode)"
     puts $handle "transpose $trainer(transpose)"
@@ -1006,17 +1010,21 @@ set maxval [expr 62*62*62*62]
 
 proc make_random_seed {} {
     global maxval rseed
+    global trainer
     set n [expr int($maxval*rand())]
     set rseed [n2string $n]
-    #puts $rseed
+    set trainer(rseed) $rseed
     reset_random_seed
 }
 
 proc reset_random_seed {} {
     global rseed
+    global trainer
+    set rseed $trainer(rseed)
     set n [string2n $rseed]
     expr srand($n)
     focus .f
+    #.f.rseed configure -textvariable rseed
 }
 
 #end or source randseed.tcl
@@ -1337,18 +1345,17 @@ proc make_interface {} {
         set keyspace($intvl) $space
     }
     
-    if {$trainer(repeatability)} {
-        eval button .f.rseedbut -text $lang(random) $ww -command make_random_seed
-        entry .f.rseed -width 8 -textvariable rseed -vcmd {Validchar %P} \
+button .f.rseedbut -text $lang(resetseed) -width 12 -command reset_random_seed
+entry .f.rseed -width 8 -textvariable rseed -vcmd {Validchar %P} \
                 -validate all
-        eval button .f.rseedaction -text $lang(reset) $ww -command reset_random_seed
-        make_random_seed
-        bind .f.rseed  <Return> {
-            reset_random_seed
+button .f.newseed -text $lang(newseed) -command {
+         make_random_seed
+         reset_random_seed
+         }
+
+    if {$trainer(repeatability)} {
+        grid .f.rseedbut .f.rseed .f.newseed
         }
-        
-        grid .f.rseedbut .f.rseed .f.rseedaction
-    }
     
     grid .f.ans -columnspan 3
     
@@ -1380,6 +1387,8 @@ $v add radiobutton -label "from file" -command {set trainer(drumsrc) file
 $v add radiobutton -label "randomly generated"\
  -command {setup_random_drum_trainer}
 }
+
+
 
 
 # Part 9.0 setup drums, figured bass, chords
@@ -4040,6 +4049,7 @@ proc verify_chord {ntype} {
     global lang
     global chordseq
     global ntrials
+    global chordname
     
     #don't count other guesses
     incr try
@@ -4054,7 +4064,7 @@ proc verify_chord {ntype} {
     if {$try > 0} {
     }
     if {$ntype == $ttype} {
-        .f.ans configure -text $lang(correct)
+        .f.ans configure -text "$lang(correct) $chordname"
         if {$try == 1} {incr ncorrect
                        incr cmatrix($ttype-$ntype)}
         update
@@ -8225,6 +8235,9 @@ if {$trainer(exercise) == "intervals"} {set ttype unison};
 
 if {$trainer(makelog)} {set loghandle [open "tksolfege.log" "w"]}
 
+if {$trainer(repeatability) == 1} {
+  reset_random_seed
+  }
 
 positionWindow .
 focus .f
