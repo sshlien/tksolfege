@@ -95,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.94 2025-09-22 09:25"
+set tksolfegeversion "1.95 2025-09-30 09:50"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -142,6 +142,7 @@ array set lang {
     firstpress {first press new}
     flats {flats}
     format {format}
+    fontsize {font size}
     from {from}
     harmonic {harmonic}
     help	{help}
@@ -570,6 +571,7 @@ if {$tcl_platform(os) == "Linux"} {
 set trainer(version) $tksolfegeversion
 set trainer(top) ""
 
+set trainer(accent) 5
 set trainer(chordtypes) {maj min aug dim}
 set trainer(intervaltypes) {major3rd perfect5th octave}
 set trainer(keysigtypes) {-3 -2 -1 0 1 2 3}
@@ -597,6 +599,7 @@ if {$tcl_platform(platform) == "windows"} {
    }
 set trainer(makelog) 0
 set trainer(font) {Arial 10 bold}
+set trainer(fontsize) 10
 set trainer(lang) "none"
 set trainer(rhythm_accent) 25
 set trainer(rhythm_beats_per_bar) 2
@@ -672,6 +675,7 @@ proc write_ini_file {filename} {
     puts $handle "fluidsynth_path $trainer(fluidsynth_path)"
     puts $handle "audio_driver $trainer(audio_driver)"
     puts $handle "font $trainer(font)"
+    puts $handle "fontsize $trainer(fontsize)"
     puts $handle "top $trainer(top)"
     puts $handle "velocity $trainer(velocity)"
     puts $handle "msec  $trainer(msec)"
@@ -680,6 +684,7 @@ proc write_ini_file {filename} {
     puts $handle "range $trainer(range)"
     puts $handle "instrument $trainer(instrument)"
     puts $handle "playmode $trainer(playmode)"
+    puts $handle "accent $trainer(accent)"
     puts $handle "autonew $trainer(autonew)"
     puts $handle "autoplay $trainer(autoplay)"
     puts $handle "autonewdelay $trainer(autonewdelay)"
@@ -2224,6 +2229,8 @@ proc make_config_progression {} {
             -value melodic
     radiobutton $w.harmonic -text $lang(harmonic)  -variable trainer(playmode) \
             -value harmonic
+    radiobutton $w.both     -text $lang(both)  -variable trainer(playmode)\
+            -value  both
     checkbutton $w.shift -text "shift chord" -variable trainer(shiftedchord)
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     grid $w.instrlab $w.instrbut
@@ -2231,7 +2238,7 @@ proc make_config_progression {} {
     grid $w.instrlab $w.instrbut
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
-    grid $w.harmonic $w.melodic
+    grid $w.harmonic $w.melodic $w.both
     grid $w.shift $w.autonew
     grid $w.aural $w.visual $w.2ways
     grid $w.plain $w.inv1 $w.inv2
@@ -3711,9 +3718,15 @@ proc playchord_action {chordseq mode} {
     if {[string equal $trainer(direction) down]} {
         set chordseq [reverselist $chordseq]}
     if {$mode == "melodic"} {
+      set i 0
       foreach note $chordseq {
         set k $note
-        muzic::playnote 0 $k $trainer(velocity) $trainer(msec)
+        if {$i == 0} {
+           muzic::playnote 0 $k [expr $trainer(velocity) + $trainer(accent)] $trainer(msec)
+          } else {
+           muzic::playnote 0 $k [expr $trainer(velocity)] $trainer(msec)
+          }
+        incr i
         after $trainer(msec)
         }
     } else {
@@ -7247,6 +7260,7 @@ proc show_chord_in_grand_staff {chord} {
 
 proc advance_settings_config {} {
 global trainer lang
+set sizelist {8 9 10 11 12 13 14 15 16}
 if {![winfo exist .advanced]} {toplevel .advance
    positionWindow .advance
    wm title .advance "advanced settings"
@@ -7262,6 +7276,12 @@ if {![winfo exist .advanced]} {toplevel .advance
    button $w.langb -text $lang(language) -command pick_language_pack
    label $w.rep -text $lang(repeatability)
    checkbutton $w.repchk  -variable trainer(repeatability) -command restart
+   label $w.fontsizelab -text $lang(fontsize)
+   ttk::combobox $w.fontsize -width 8  -textvariable trainer(fontsize)\
+         -values $sizelist
+   bind $w.fontsize <<ComboboxSelected>> {changeFontSize}
+
+  
    label $w.msg -text ""
 
    grid $w.fluidlab $w.fluidpath
@@ -7270,11 +7290,20 @@ if {![winfo exist .advanced]} {toplevel .advance
    grid $w.brlab $w.bre
    grid $w.langb
    grid $w.rep $w.repchk
+   grid $w.fontsizelab $w.fontsize
    grid $w.msg -columnspan 2
    bind $w.sfe <Return> restart
    }
  }
  
+proc changeFontSize {} {
+global trainer
+global lang
+set font "Arial $trainer(fontsize) bold"
+set trainer(font) $font
+.advance.msg config -text $lang(restart)
+}
+
 
 proc restart {} {
     global lang
@@ -8184,16 +8213,16 @@ global trainer
 global proglesson
 global cmatrix
 global pickedn
+if {![info exist pickedprogression]}  {
+        .f.ans config -text $lang(firstpress)
+        return
+    }
 set p .proginterface
 set progex $progression_lesson($trainer(proglesson))
 set i [lindex $progex $j]
 clear_selected_progressions
 incr cmatrix($pickedn-$i)
 $p.$j configure -bd 5
-if {![info exist pickedprogression]}  {
-        .f.ans config -text $lang(firstpress)
-        return
-    }
 set selectedprogression $chordprogressions($i)
 #puts "pickedprogression = $pickedprogression selectedprogression = $selectedprogression"
 if {$chordprogressions($i) == $pickedprogression} {
