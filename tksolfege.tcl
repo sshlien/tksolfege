@@ -17,7 +17,7 @@ package require Tk
 
 # tksolfege.tcl: a program for music ear training
 
-# Copyright (C) 2005-2025 Seymour Shlien
+# Copyright (C) 2005-2026 Seymour Shlien
 
 
 # This program is free software; you can redistribute it and/or modify
@@ -77,6 +77,7 @@ package require Tk
 # Part 36.0 advance settings
 # Part 37.0 drum support
 # Part 38.0 Chord progressions
+# Part 39.0 Piano keyboard
 
 
 set error_return [catch {package require starkit} errmsg]
@@ -95,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.95 2025-09-30 09:50"
+set tksolfegeversion "1.96 2025-12-31 08:41"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -8246,6 +8247,93 @@ place_progressions_buttons
 
 #end of Part 38.0
 
+#Part 39.0
+# Piano keyboard
+
+proc keyboard {} {
+toplevel .piano
+canvas .piano.c -width 380 -height 80
+set midipitch 24 
+set k .piano.c
+pack $k
+set leftkey "5 0 5 30 0 30 0 50 17 50 17 0"
+set rightkey "0 0 0 50 17 50 17 30 12 30 12 0"
+set middlekey "0 0 0 50 17 50 17 0"
+set blackkey "0 0 0 30 8 30 8 0"
+for {set i 0} {$i < 24} {incr i} {
+  set j [expr $i % 8]
+  set ix [expr $i*17 + 1]
+  switch $j {
+    0 -
+    4 {
+     set midipitch [drawkey $ix $rightkey beige $midipitch]
+     set midipitch [drawkey [expr $ix + 13] $blackkey grey $midipitch]
+       }
+    1 -
+    5 -
+    6 {
+      set midipitch [drawkey $ix $leftkey beige $midipitch]
+      set midipitch [drawkey [expr $ix + 13] $blackkey grey $midipitch]
+      } 
+    2 -
+    7 {
+      set midipitch [drawkey $ix $leftkey beige $midipitch]
+       }
+    3 {
+      set midipitch [drawkey $ix $middlekey beige $midipitch]
+      }
+    }
+  }
+update
+}
+
+proc drawkey {ix key shade midipitch} {
+global midi2id
+global id2midi
+global id2shade
+set id [.piano.c create polygon $key -fill $shade -outline black]
+.piano.c move $id $ix 0
+incr midipitch
+set midi2id($midipitch) $id
+set id2midi($id) $midipitch
+set id2shade($id) $shade
+.piano.c bind $id <Button-1> "pianoclicked $id"
+return $midipitch
+}
+ 
+proc pianoclicked {item} {
+global id2midi
+global id2shade
+global trainer
+#puts "pianoclicked $item"
+set pitch $id2midi($item)
+.piano.c itemconfigure $item -fill red
+update
+muzic::playnote 0 $pitch $trainer(velocity) $trainer(msec)
+.piano.c itemconfigure $item -fill $id2shade($item)
+}
+
+
+
+proc playkeyboard {midipitches} {
+global id2midi
+global midi2id
+global id2shade
+global trainer
+muzic::init
+foreach pitch $midipitches {
+  set id  $midi2id($pitch)
+ .piano.c itemconfigure $id -fill red
+  update
+  muzic::playnote 0 $pitch $trainer(velocity) $trainer(msec)
+ .piano.c itemconfigure $id -fill $id2shade($id)
+  update
+ }
+}
+
+#keyboard
+#playkeyboard {25 26 27 30 42}
+   
 
 set error_return [catch {muzic::init} errmsg]
 if {$error_return} {
