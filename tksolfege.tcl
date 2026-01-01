@@ -96,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.96 2025-12-31 08:41"
+set tksolfegeversion "1.98 2026-01-01 10:46"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -651,12 +651,13 @@ set trainer(.prog) ""
 set trainer(.rhythmselector) ""
 set trainer(.sofasel) ""
 set trainer(.advance) ""
+set trainer(.piano) ""
 }
 
 proc getGeometryOfAllTopLevels {} {
 global trainer
 set toplevellist {"." ".config" ".ownlesson" ".stats" ".help"
-   ".prog" ".rhythmselector" ".sofasel" ".advance"}
+   ".prog" ".rhythmselector" ".sofasel" ".advance" ".piano"}
 foreach top $toplevellist {
     if {[winfo exist $top]} {
       set g [wm geometry $top]
@@ -744,6 +745,7 @@ proc write_ini_file {filename} {
     puts $handle ".rhythmselector $trainer(.rhythmselector)"
     puts $handle ".sofasel $trainer(.sofasel)"
     puts $handle ".advance $trainer(.advance)"
+    puts $handle ".piano $trainer(.piano)"
     close $handle
 }
 
@@ -1964,7 +1966,7 @@ proc make_config {} {
     set highpitch [midi2notename $trainer(maxpitch)]
     label $w.highpitchname -text $highpitch -width 3
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     checkbutton $w.autoplay -variable trainer(autoplay) -text $lang(autop)
@@ -2129,7 +2131,7 @@ proc make_config_sofa {} {
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
             -length 128 -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     set w1 .config.sofasing
     frame $w1
@@ -2188,7 +2190,7 @@ proc make_config_sofa_id {} {
     scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
             -length 128 -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
     grid $w.pitch $w.pitchsca $w.pitchval
@@ -2212,7 +2214,7 @@ proc make_config_progression {} {
     label $w.pitch -text $lang(pitch)
     scale $w.pitchsca -from 40 -to 60 -variable trainer(chordroot) -orient hor -width 10
     label $w.notedurlab -text $lang(duration)
-    scale $w.notedursca -from 100 -to 1000 -variable trainer(msec)\
+    scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
             -length 128 -orient hor -width 10
     radiobutton $w.aural -text $lang(aural) -variable trainer(testmode)\
             -value aural
@@ -3701,6 +3703,17 @@ proc playchord {chordseq  mode} {
        }
 }
 
+proc playchord_with_keyboard {chordseq  mode} {
+    global trainer
+    if {$mode == "both"} {
+        playchord_action_with_keyboard $chordseq harmonic
+        after $trainer(msec)
+        playchord_action_with_keyboard $chordseq  melodic
+    } else {
+       playchord_action_with_keyboard $chordseq $mode
+       }
+}
+
 
 proc reverselist {mlist} {
     #reverses the order of elements of a list
@@ -3738,6 +3751,54 @@ proc playchord_action {chordseq mode} {
         }
       }
   }
+
+proc playchord_action_with_keyboard {chordseq mode} {
+    global trainer
+    global starkitversion
+    global midi2id
+    global id2shade
+    if {![winfo exists .piano]} keyboard
+    muzic::channel 0 $trainer(instrument)
+    if {[string equal $trainer(direction) down]} {
+        set chordseq [reverselist $chordseq]}
+    if {$mode == "melodic"} {
+      set i 0
+      foreach note $chordseq {
+        set k $note
+        set id $midi2id($k)
+        .piano.c itemconfigure $id -fill red
+        update
+        if {$i == 0} {
+           muzic::playnote 0 $k [expr $trainer(velocity) + $trainer(accent)] $trainer(msec)
+          } else {
+           muzic::playnote 0 $k [expr $trainer(velocity)] $trainer(msec)
+          }
+        incr i
+        after $trainer(msec)
+        .piano.c itemconfigure $id -fill $id2shade($id)
+        }
+    } else {
+      if {$starkitversion} {
+        playchord_for_muzic_starkit $chordseq
+        } else {
+        foreach note $chordseq {
+          set k $note
+          set id $midi2id($k)
+          .piano.c itemconfigure $id -fill red
+          }
+          update
+
+        muzic::playchord 0 $chordseq $trainer(velocity) $trainer(msec)
+
+        foreach note $chordseq {
+          set k $note
+          set id $midi2id($k)
+          .piano.c itemconfigure $id -fill $id2shade($id)
+          }
+          update
+        }
+      }
+}
 
 proc playchord_for_muzic_starkit {chordseq} {
  global trainer
@@ -3901,7 +3962,12 @@ proc repeat {} {
         playcadence $troot  $test_cadence }
         }
     "drumseq" start_playseq
-    "prog" {playprogression $progchordlist}
+    "prog" {
+           if {[winfo exists .piano]} {
+             playprogression_with_keyboard $progchordlist
+             } else {playprogression $progchordlist
+             }
+           }
      }
 }
 
@@ -8131,6 +8197,13 @@ foreach prog $progchordlist {
   }
 }
 
+proc playprogression_with_keyboard {progchordlist} {
+global trainer
+foreach prog $progchordlist {
+   playchord_with_keyboard $prog $trainer(playmode)
+  }
+}
+
 global romanresponse
 
 
@@ -8170,7 +8243,7 @@ if {$trainer(chordinversion) > 1} {
 draw_progression $progchordlist
 }
 
-proc play_selectedprogression {} {
+proc play_selectedprogression {method} {
 global selectedprogression
 global trainer
 
@@ -8185,14 +8258,19 @@ if {$trainer(chordinversion) > 0} {
 if {$trainer(chordinversion) > 1} {
    set progchordlist [make_inversion $progchordlist]
    }
-playprogression $progchordlist 
+#playprogression $progchordlist 
+if {$method == 1} {
+  playprogression_with_keyboard $progchordlist 
+ } else {
+  playprogression $progchordlist }
 }
 
 proc add_progression_functions {} {
 set p .proginterface
 button $p.display -text display -width 7 -command display_progression
-button $p.play -text play -width 7 -command play_selectedprogression
-grid  $p.display $p.play
+button $p.play -text play -width 7 -command {play_selectedprogression 0}
+button $p.kbplay -text "kb play" -width 7 -command {play_selectedprogression 1}
+grid  $p.display $p.play $p.kbplay
 }
 
 proc clear_selected_progressions {} {
@@ -8252,7 +8330,8 @@ place_progressions_buttons
 
 proc keyboard {} {
 toplevel .piano
-canvas .piano.c -width 380 -height 80
+positionWindow .piano
+canvas .piano.c -width 660 -height 80
 set midipitch 24 
 set k .piano.c
 pack $k
@@ -8260,26 +8339,26 @@ set leftkey "5 0 5 30 0 30 0 50 17 50 17 0"
 set rightkey "0 0 0 50 17 50 17 30 12 30 12 0"
 set middlekey "0 0 0 50 17 50 17 0"
 set blackkey "0 0 0 30 8 30 8 0"
-for {set i 0} {$i < 24} {incr i} {
-  set j [expr $i % 8]
+for {set i 0} {$i < 36} {incr i} {
+  set j [expr $i % 7]
   set ix [expr $i*17 + 1]
   switch $j {
     0 -
-    4 {
+    3 {
      set midipitch [drawkey $ix $rightkey beige $midipitch]
      set midipitch [drawkey [expr $ix + 13] $blackkey grey $midipitch]
        }
     1 -
-    5 -
-    6 {
+    4 -
+    5 {
       set midipitch [drawkey $ix $leftkey beige $midipitch]
       set midipitch [drawkey [expr $ix + 13] $blackkey grey $midipitch]
       } 
     2 -
-    7 {
+    6 {
       set midipitch [drawkey $ix $leftkey beige $midipitch]
        }
-    3 {
+    2 {
       set midipitch [drawkey $ix $middlekey beige $midipitch]
       }
     }
@@ -8293,10 +8372,11 @@ global id2midi
 global id2shade
 set id [.piano.c create polygon $key -fill $shade -outline black]
 .piano.c move $id $ix 0
-incr midipitch
 set midi2id($midipitch) $id
 set id2midi($id) $midipitch
 set id2shade($id) $shade
+#puts "id=$id key=$key midipitch=$midipitch"
+incr midipitch
 .piano.c bind $id <Button-1> "pianoclicked $id"
 return $midipitch
 }
@@ -8305,8 +8385,8 @@ proc pianoclicked {item} {
 global id2midi
 global id2shade
 global trainer
-#puts "pianoclicked $item"
 set pitch $id2midi($item)
+#puts "pianoclicked $item $pitch"
 .piano.c itemconfigure $item -fill red
 update
 muzic::playnote 0 $pitch $trainer(velocity) $trainer(msec)
