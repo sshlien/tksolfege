@@ -96,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.98 2026-01-01 10:46"
+set tksolfegeversion "1.99 2026-01-06 07:10"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -185,6 +185,7 @@ array set lang {
     prog {progressions}
     random {random}
     newseed {new seed}
+    noteid {note reading}
     resetseed {reset seed}
     repeat	{repeat}
     repeatability {repeatability}
@@ -583,6 +584,8 @@ set trainer(velocity) 80
 set trainer(msec) 500
 set trainer(minpitch) 36
 set trainer(maxpitch) 72
+set trainer(lowpitch) 50
+set trainer(hipitch) 62
 set trainer(instrument) 0
 set trainer(playmode) harmonic
 set trainer(autonew) 0
@@ -683,6 +686,8 @@ proc write_ini_file {filename} {
     puts $handle "msec  $trainer(msec)"
     puts $handle "minpitch $trainer(minpitch)"
     puts $handle "maxpitch $trainer(maxpitch)"
+    puts $handle "lowpitch $trainer(lowpitch)"
+    puts $handle "hipitch $trainer(hipitch)"
     puts $handle "range $trainer(range)"
     puts $handle "instrument $trainer(instrument)"
     puts $handle "playmode $trainer(playmode)"
@@ -1162,6 +1167,8 @@ proc make_interface {} {
             -takefocus 0 $ww -padx 8
     set v .f.exercise.menu
     menu $v -tearoff 0
+    $v add radiobutton -label $lang(noteid) \
+            -command "setup_exercise_interface noteid"
     $v add radiobutton -label $lang(sofaid) \
             -command "setup_exercise_interface sofaid"
     $v add radiobutton -label $lang(sofadic) \
@@ -1690,6 +1697,18 @@ proc setup_exercise_interface {exercise} {
         switch_sofa_lesson_menu
         test_sofasing 1
         set nrepeats 0}
+
+    if {$trainer(exercise) == "noteid"} {
+        .f.giveup configure -command show_note_ids
+        pack forget .f
+        pack forget .w
+        pack forget .rhythm
+        pack .f -side left
+        pack .doraysing -side right
+        .f.ans configure -text $lang($trainer(exercise))
+        #switch_sofa_lesson_menu
+        test_noteid
+        set nrepeats 0}
     
     if {$trainer(exercise) == "keysigid"} {
         pack forget .f
@@ -2044,6 +2063,7 @@ proc make_config {} {
     make_config_random_drumseq
     make_config_sofa_id
     make_config_progression 
+    make_config_notation
     label_keysig $trainer(key)
     
     switch_config_sheet
@@ -2200,6 +2220,99 @@ proc make_config_sofa_id {} {
     grid $w.autonew $w.playtonic
   }
 
+proc make_config_sofasing {} {
+global lang trainer
+set w .config.sofasing
+frame $w
+label $w.nnotes -text $lang(nnotes)
+scale $w.nnotesca -from 1 -to 16 -variable trainer(sofa_notes)\
+        -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
+grid $w.nnotes $w.nnotesca
+label $w.instrlab -text $lang(instrument)
+button $w.instrbut -text $patches($trainer(instrument)) \
+        -pady 2 -command sofa_id_prog_dialog
+grid $w.instrlab $w.instrbut
+label $w.vellab -text $lang(velocity)
+scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
+        -length 128 -orient hor -width 10
+grid $w.vellab $w.velsca
+label $w.notedurlab -text $lang(duration)
+scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
+        -length 128 -orient hor -width 10
+grid $w.notedurlab $w.notedursca
+label $w.clef -text $lang(clef)
+eval menubutton $w.clefbutton  -menu $w.clefbutton.clefmenu -text $lang(automatic)
+set v $w.clefbutton.clefmenu
+menu $v -tearoff 0
+  $v add radiobutton -label automatic -command "select_clef -1"
+  $v add radiobutton -label $lang(treble) -command "select_clef 0"
+  $v add radiobutton -label $lang(alto) -command "select_clef 1"
+  $v add radiobutton -label $lang(bass) -command "select_clef 2"
+grid  $w.clef $w.clefbutton 
+    set v $w.pattern.menu
+    menu $v -tearoff 0
+    $v add radiobutton -label 0123 -command "select_pat 0"
+    $v add radiobutton -label 0102 -command "select_pat 1"
+    $v add radiobutton -label 0121 -command "select_pat 2"
+    $v add radiobutton -label 0213 -command "select_pat 3"
+    $v add radiobutton -label 0314 -command "select_pat 4"
+    $v add radiobutton -label 0321 -command "select_pat 5"
+grid $w.pat $w.pattern
+label $w.transpose -text $lang(transpose)
+scale $w.transca -from -12 -to 12 -variable trainer(transpose)\
+grid $w.transpose $w.transca
+}
+
+proc make_config_notation {} {
+global lang trainer
+global patches
+set w .config.notate
+frame $w
+label $w.nnotes -text $lang(nnotes)
+scale $w.nnotesca -from 1 -to 10 -variable trainer(sofa_notes)\
+        -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
+grid $w.nnotes $w.nnotesca
+label $w.instrlab -text $lang(instrument)
+button $w.instrbut -text $patches($trainer(instrument)) \
+        -pady 2 -command sofa_id_prog_dialog
+grid $w.instrlab $w.instrbut
+label $w.vellab -text $lang(velocity)
+scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
+        -length 128 -orient hor -width 10
+grid $w.vellab $w.velsca
+label $w.notedurlab -text $lang(duration)
+scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
+        -length 128 -orient hor -width 10
+grid $w.notedurlab $w.notedursca
+label $w.lowpitchlab -text $lang(lowest)
+set lowpitch [midi2notename $trainer(minpitch)]
+label $w.lowpitchname -text $lowpitch -width 3
+scale $w.lowpitchsca -from 11 -to 120 -variable trainer(minpitch)\
+        -length 128 -orient hor -width 10 -command change_range
+grid $w.lowpitchlab $w.lowpitchsca $w.lowpitchname
+label $w.highpitchlab -text $lang(highest)
+set highpitch [midi2notename $trainer(maxpitch)]
+label $w.highpitchname -text $highpitch -width 3
+scale $w.highpitchsca -from 11 -to 120 -variable trainer(maxpitch)\
+        -length 128 -orient hor -width 10 -command change_range
+grid $w.highpitchlab $w.highpitchsca $w.highpitchname
+label $w.clef -text $lang(clef)
+eval menubutton $w.clefbutton  -menu $w.clefbutton.clefmenu -text $lang(automatic)
+set v $w.clefbutton.clefmenu
+menu $v -tearoff 0
+  $v add radiobutton -label automatic -command "select_clef -1"
+  $v add radiobutton -label $lang(treble) -command "select_clef 0"
+  $v add radiobutton -label $lang(alto) -command "select_clef 1"
+  $v add radiobutton -label $lang(bass) -command "select_clef 2"
+grid  $w.clef $w.clefbutton 
+label $w.use -text "use sharps"
+grid $w.use
+}
+
+
+
+
+
 proc make_config_progression {} {
     global lang trainer
     global patches
@@ -2323,6 +2436,7 @@ proc switch_config_sheet {} {
     pack forget .config.drumseq
     pack forget .config.rdrumseq
     pack forget .config.progression
+    pack forget .config.notate
     if {$trainer(exercise) == "rhythmdic"} {
         pack .config.rhythm
     } elseif {$trainer(exercise) == "sofasing" || $trainer(exercise) == "sofadic" || $trainer(exercise) == "sofabadnote" || $trainer(exercise) == "sofaid"} {
@@ -2337,6 +2451,10 @@ proc switch_config_sheet {} {
            }
     } elseif {$trainer(exercise) == "prog"} {
            pack .config.progression
+    } elseif {$trainer(exercise) == "noteid"} {
+           pack .config.notate
+    } elseif {$trainer(exercise) == "sofasing"} {
+           pack .config.sofasing
     } else { 
         pack .config.main
         if {$trainer(exercise) == "chordsdia" ||
@@ -2346,6 +2464,7 @@ proc switch_config_sheet {} {
         }
    }
 }
+
 
 proc change_range {dummy} {
     global trainer
@@ -3428,6 +3547,7 @@ proc next_test {} {
     set try 0
    .f.ans configure -text ""
     switch $trainer(exercise) {
+        noteid {test_noteid}
 	rhythmdic {test_rhythm}
 	chords {test_chord}
 	chordsdia {test_chord}
@@ -5522,6 +5642,23 @@ proc remove_accidentals_from_major_scale {} {
     }
 }
 
+proc test_noteid {} {
+    global melodylist
+    global trainer
+    global notelist
+    clear_sofa_answer
+    .doraysing.msg config -text ""
+    set width [expr $trainer(sofa_notes)*20+70]
+    .doraysing.c configure  -width $width
+    set clefcode $trainer(clefcode)
+    set seq [makemidiseq 5]
+    set notelist [midiseq2notelist $seq]
+    puts "notelist = $notelist"
+    notate_sofa 60 0
+    update
+    #playsofa_action_1 [expr $trainer(sofa_tonic) + $trainer(transpose)]
+}
+
 proc test_sofasing {first_time} {
     global melodylist
     global trainer
@@ -5798,6 +5935,10 @@ proc play_selected_scale {} {
     after $trainer(msec)
 }
 
+proc show_note_ids {} {
+global notelist
+.doraysing.msg configure -text $notelist
+}
 
 proc show_sing_sofa {} {
     global melodylist
@@ -6142,6 +6283,20 @@ proc midiseq2notelist {sequence} {
     }
     return $notelist
 }
+
+proc makemidiseq {nmidis} {
+   global trainer
+   set npitches [expr $trainer(maxpitch) - $trainer(minpitch) + 1]
+   set seq [list]
+   for {set i 0} {$i < $nmidis} {incr i} {
+    set j [random_number $npitches]
+    set j [expr $j + $trainer(minpitch)]
+    lappend seq $j
+    } 
+   #puts "makemidiseq $seq"
+   return $seq
+}
+
 
 proc show_notelist {notelist clefcode musicframe} {
     # draws notes on staff for a given clef.
