@@ -96,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "1.99 2026-01-06 07:10"
+set tksolfegeversion "2.00 2026-01-09 16:07"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -577,6 +577,7 @@ set trainer(accent) 5
 set trainer(chordtypes) {maj min aug dim}
 set trainer(intervaltypes) {major3rd perfect5th octave}
 set trainer(keysigtypes) {-3 -2 -1 0 1 2 3}
+set trainer(keysf) -1
 set trainer(scaletypes) {ionian dorian phrygian aeolian}
 set trainer(cadences) {pacn iacn hcn pcn dcn}
 set trainer(keysigformat) 0
@@ -655,12 +656,13 @@ set trainer(.rhythmselector) ""
 set trainer(.sofasel) ""
 set trainer(.advance) ""
 set trainer(.piano) ""
+set trainer(.notebuttons) ""
 }
 
 proc getGeometryOfAllTopLevels {} {
 global trainer
 set toplevellist {"." ".config" ".ownlesson" ".stats" ".help"
-   ".prog" ".rhythmselector" ".sofasel" ".advance" ".piano"}
+   ".prog" ".rhythmselector" ".sofasel" ".advance" ".piano" ".notebuttons"}
 foreach top $toplevellist {
     if {[winfo exist $top]} {
       set g [wm geometry $top]
@@ -700,6 +702,7 @@ proc write_ini_file {filename} {
     puts $handle "intervaltypes $trainer(intervaltypes)"
     puts $handle "key $trainer(key)"
     puts $handle "keysigtypes $trainer(keysigtypes)"
+    puts $handle "keysf $trainer(keysf)"
     puts $handle "keysigformat $trainer(keysigformat)"
     puts $handle "direction $trainer(direction)"
     puts $handle "soundfont $trainer(soundfont)"
@@ -751,6 +754,7 @@ proc write_ini_file {filename} {
     puts $handle ".sofasel $trainer(.sofasel)"
     puts $handle ".advance $trainer(.advance)"
     puts $handle ".piano $trainer(.piano)"
+    puts $handle ".notebuttons $trainer(.notebuttons)"
     close $handle
 }
 
@@ -914,6 +918,14 @@ set progression_lesson(6) {9 10 11}
 set progression_lesson(7) {0 1 2 3 4 5}
 set progression_lesson(8) {6 7 8 9 10 11}
 set progression_lesson(9) {0 1 2 3 4 5 6 7 8 9 10 11}
+
+set noteid_lesson(0) "treble"
+set noteid_lesson(1) "treble+"
+set noteid_lesson(2) "treble-"
+set noteid_lesson(3) "bass"
+set noteid_lesson(4) "bass+"
+set noteid_lesson(5) "bass-"
+
 
 
 # Part 7.0  random support
@@ -1156,6 +1168,7 @@ proc make_interface {} {
     global figbas_inv
     global majormodes exotics
     global sofa_lesson
+    global noteid_lesson
 
     set deg "\u00B0"
     set ww {-width 12}
@@ -1299,6 +1312,12 @@ proc make_interface {} {
     $v add radiobutton -label major -command "calculate_mode_cadences 0"
     $v add radiobutton -label minor -command "calculate_mode_cadences 5"
     $v add radiobutton -label dorian -command "calculate_mode_cadences 1"
+
+    set v .f.lessmenu.noteid
+    menu $v -tearoff 0
+    for {set i 0} {$i < 6} {incr i} {
+      $v add radiobutton -label $noteid_lesson($i) -command "select_noteid_lesson $noteid_lesson($i)"
+      }
     
     switch $trainer(exercise) {
         "chordsdia" { .f.lessmenu configure -menu .f.lessmenu.diatonicchords }
@@ -1319,6 +1338,7 @@ proc make_interface {} {
         "scalesid" { .f.lessmenu configure -menu .f.lessmenu.scales }
     
         "idcad" { .f.lessmenu configure -menu .f.lessmenu.cadence }
+        "noteid" { .f.lessmenu configure -menu .f.lessmenu.noteid}
         }
  
     button .f.help -text $lang(help) -takefocus 0 -width 12\
@@ -1403,6 +1423,27 @@ $v add radiobutton -label "randomly generated"\
  -command {setup_random_drum_trainer}
 }
 
+
+proc select_noteid_lesson {lesson} {
+global trainer
+puts "select_noteid_lesson $lesson"
+set midipitchbot [list 62 76 50 46 54 30]
+switch $lesson {
+  treble {set i 0}
+  treble+ {set i 1}
+  treble- {set i 2}
+  bass {set i 3}
+  bass+ {set i 4}
+  bass- {set i 5}
+  }
+set trainer(minpitch) [lindex $midipitchbot $i]
+set trainer(maxpitch) [expr $trainer(minpitch) + 12]
+if {$i > 2} {set trainer(clefcode) 2
+ } else {
+        set trainer(clefcode) 0
+        }
+#puts "pitch range $trainer(minpitch) $trainer(maxpitch)"
+}
 
 
 
@@ -2272,18 +2313,18 @@ label $w.nnotes -text $lang(nnotes)
 scale $w.nnotesca -from 1 -to 10 -variable trainer(sofa_notes)\
         -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
 grid $w.nnotes $w.nnotesca
-label $w.instrlab -text $lang(instrument)
-button $w.instrbut -text $patches($trainer(instrument)) \
-        -pady 2 -command sofa_id_prog_dialog
-grid $w.instrlab $w.instrbut
-label $w.vellab -text $lang(velocity)
-scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
-        -length 128 -orient hor -width 10
-grid $w.vellab $w.velsca
-label $w.notedurlab -text $lang(duration)
-scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
-        -length 128 -orient hor -width 10
-grid $w.notedurlab $w.notedursca
+#label $w.instrlab -text $lang(instrument)
+#button $w.instrbut -text $patches($trainer(instrument)) \
+#        -pady 2 -command sofa_id_prog_dialog
+#grid $w.instrlab $w.instrbut
+#label $w.vellab -text $lang(velocity)
+#scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
+#        -length 128 -orient hor -width 10
+#grid $w.vellab $w.velsca
+#label $w.notedurlab -text $lang(duration)
+#scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
+#        -length 128 -orient hor -width 10
+#grid $w.notedurlab $w.notedursca
 label $w.lowpitchlab -text $lang(lowest)
 set lowpitch [midi2notename $trainer(minpitch)]
 label $w.lowpitchname -text $lowpitch -width 3
@@ -2305,8 +2346,9 @@ menu $v -tearoff 0
   $v add radiobutton -label $lang(alto) -command "select_clef 1"
   $v add radiobutton -label $lang(bass) -command "select_clef 2"
 grid  $w.clef $w.clefbutton 
-label $w.use -text "use sharps"
-grid $w.use
+radiobutton $w.usesharps -text "use sharps" -value 0 -variable trainer(keysf)
+radiobutton $w.useflats -text "use flats" -value -1 -variable trainer(keysf)
+grid $w.useflats $w.usesharps
 }
 
 
@@ -2412,17 +2454,6 @@ proc activate_cmplx_checkbutton {} {
       .config.main.cmplx configure -state normal}
 }
 
-proc sofapack {} {
-    global trainer
-    if {$trainer(exercise) == "sofadic"} {
-        pack .config.sofa
-    } elseif {$trainer(exercise) == "sofaid"} {
-        pack .config.sofaid
-    } elseif {$trainer(exercise) == "sofabadnote"} {
-        pack .config.sofa
-    } else {pack .config.sofa .config.sofasing}
-}
-
 proc switch_config_sheet {} {
     global trainer
     if {![winfo exist .config]} return
@@ -2437,33 +2468,36 @@ proc switch_config_sheet {} {
     pack forget .config.rdrumseq
     pack forget .config.progression
     pack forget .config.notate
-    if {$trainer(exercise) == "rhythmdic"} {
-        pack .config.rhythm
-    } elseif {$trainer(exercise) == "sofasing" || $trainer(exercise) == "sofadic" || $trainer(exercise) == "sofabadnote" || $trainer(exercise) == "sofaid"} {
-        sofapack
-    } elseif {$trainer(exercise) == "keysigid"} {
-        pack .config.keysig
-    } elseif {$trainer(exercise) == "drumseq"} {
-         if {$trainer(drumsrc) == "file"} {
-           pack .config.drumseq
-           } else {
-           pack .config.rdrumseq
-           }
-    } elseif {$trainer(exercise) == "prog"} {
-           pack .config.progression
-    } elseif {$trainer(exercise) == "noteid"} {
-           pack .config.notate
-    } elseif {$trainer(exercise) == "sofasing"} {
-           pack .config.sofasing
-    } else { 
+    switch $trainer(exercise) {
+      "rhythmdic" {pack .config.rhythm}
+      "sofadic" {pack .config.sofa}
+      "sofabadnote" {pack .config.sofa}
+      "sofasing" {pack .config.sofasing}
+      "sofaid" {pack .config.sofaid}
+      "keysig" {pack .config.keysig}
+      "prog" {pack .config.progression}
+      "noteid" {pack .config.notate}
+      "drumseq" {switch_to_drumseq_config}
+      default {
         pack .config.main
         if {$trainer(exercise) == "chordsdia" ||
             $trainer(exercise) == "idfigbas"} {
             activate_mode_keysig} else {
             deactivate_mode_keysig
+            }
         }
-   }
+    }
 }
+
+proc switch_to_drumseq_config {} {
+global trainer
+if {$trainer(drumsrc) == "file"} {
+      pack .config.drumseq
+      } else {
+      pack .config.rdrumseq
+      }
+}
+
 
 
 proc change_range {dummy} {
@@ -5176,7 +5210,7 @@ proc startup_sofa_sing {} {
     
     set width [expr 120 + 25*$trainer(sofa_notes)]
     set sofacanvas .doraysing.c
-    canvas $sofacanvas -height 100 -width $width
+    canvas $sofacanvas -height 140 -width $width
     pack $sofacanvas
     
     set w .doraysing.msg
@@ -5468,11 +5502,10 @@ proc select_sofa_lesson {n} {
     }
     set_sofa_lesson
     clear_sofa_buttons
-    if {$trainer(exercise) == "sofaid"} {
-      place_sofa_id_buttons
-    } else {
-      place_sofa_buttons
-    }
+    switch $trainer(exercise) {
+      sofadic -
+      sofaid {place_sofa_id_buttons}
+      } 
 }
 
 proc set_sofa_lesson {} {
@@ -5651,13 +5684,16 @@ proc test_noteid {} {
     set width [expr $trainer(sofa_notes)*20+70]
     .doraysing.c configure  -width $width
     set clefcode $trainer(clefcode)
-    set seq [makemidiseq 5]
-    set notelist [midiseq2notelist $seq]
-    puts "notelist = $notelist"
-    notate_sofa 60 0
+    set seq [makemidiseq $trainer(sofa_notes)]
+    set notelist [midiseq2notelist_chromatic $seq]
+    #puts "notelist = $notelist"
+    notelist_interface
+    notate_sofa 48 $trainer(clefcode)
     update
     #playsofa_action_1 [expr $trainer(sofa_tonic) + $trainer(transpose)]
 }
+
+  
 
 proc test_sofasing {first_time} {
     global melodylist
@@ -6263,10 +6299,10 @@ proc midi2note {midipitch propagate} {
 
 proc midi2notename {midipitch} {
     global sharpnotesarray flatnotesarray
-    global keysf 
+    global trainer
     set octave [expr $midipitch/12 - 1]
     set pitchclass [expr $midipitch % 12]
-    if {$keysf < 0} {
+    if {$trainer(keysf) < 0} {
         set pitchclass $flatnotesarray($pitchclass)
     } else {
         set pitchclass $sharpnotesarray($pitchclass)
@@ -6278,7 +6314,17 @@ proc midiseq2notelist {sequence} {
     # converts MIDI pitch notation to note name representation,
     set notelist ""
     foreach pitch $sequence {
-        set note [midi2note $pitch 1]
+        set note [midi2note $pitch 0]
+        lappend notelist $note
+    }
+    return $notelist
+}
+
+proc midiseq2notelist_chromatic {sequence} {
+    # converts MIDI pitch notation to note name representation,
+    set notelist ""
+    foreach pitch $sequence {
+        set note [midi2notename $pitch]
         lappend notelist $note
     }
     return $notelist
@@ -6322,7 +6368,7 @@ proc show_notelist {notelist clefcode musicframe} {
 
 
 array set score {
-    height 100
+    height 140
     width 460
     update 0
 }
@@ -8569,6 +8615,42 @@ foreach pitch $midipitches {
 #keyboard
 #playkeyboard {25 26 27 30 42}
    
+proc notelist_interface {} {
+global trainer
+global nresponse
+set f .notebuttons.f
+set t .notebuttons.t
+if {![winfo exists .notebuttons]} {
+  toplevel .notebuttons
+  positionWindow .notebuttons
+  frame $f
+  frame $t
+  pack $f
+  pack $t
+  label $t.l 
+  pack $t.l
+  } 
+set nresponse ""
+set m 0
+for {set j $trainer(minpitch)} {$j <= $trainer(maxpitch)} {incr j} {
+  set pitch $j
+  set note [midi2notename $pitch]
+  set k [expr $m % 6]
+  set i [expr $m / 6]
+  if {[winfo exists $f.$j]} {destroy $f.$j}
+  button $f.$j -text $note -command "notelist_response $j"
+  grid $f.$j -row $i -column $k
+  incr m
+  }
+update
+}
+
+proc notelist_response {p} {
+global nresponse
+set note [midi2note $p 0]
+lappend nresponse $note
+.notebuttons.t.l configure -text $nresponse
+}
 
 set error_return [catch {muzic::init} errmsg]
 if {$error_return} {
