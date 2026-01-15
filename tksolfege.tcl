@@ -96,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "2.00 2026-01-09 16:07"
+set tksolfegeversion "2.00 2026-01-15 16.38"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -1736,7 +1736,7 @@ proc setup_exercise_interface {exercise} {
         pack .doraysing -side right
         .f.ans configure -text $lang($trainer(exercise))
         switch_sofa_lesson_menu
-        test_sofasing 1
+        .doraysing.msg configure -text "click on new button to start "
         set nrepeats 0}
 
     if {$trainer(exercise) == "noteid"} {
@@ -2099,6 +2099,7 @@ proc make_config {} {
     
     make_config_rhythm
     make_config_sofa
+    make_config_sofasing
     make_config_keysig
     make_config_file_drumseq
     make_config_random_drumseq
@@ -2194,31 +2195,7 @@ proc make_config_sofa {} {
     label $w.notedurlab -text $lang(duration)
     scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
             -length 128 -orient hor -width 10
-    set w1 .config.sofasing
-    frame $w1
-    label $w1.clef -text $lang(clef)
-    eval menubutton $w1.clefbutton  -menu $w1.clefbutton.clefmenu -text $lang(automatic)
-    set v $w1.clefbutton.clefmenu
-    menu $v -tearoff 0
-    $v add radiobutton -label automatic -command "select_clef -1"
-    $v add radiobutton -label $lang(treble) -command "select_clef 0"
-    $v add radiobutton -label $lang(alto) -command "select_clef 1"
-    $v add radiobutton -label $lang(bass) -command "select_clef 2"
-    label $w1.transpose -text $lang(transpose)
-    label $w1.pat -text $lang(pattern)
-    eval menubutton $w1.pattern -menu $w1.pattern.menu -text 0213
-    set v $w1.pattern.menu
-    menu $v -tearoff 0
-    $v add radiobutton -label 0123 -command "select_pat 0"
-    $v add radiobutton -label 0102 -command "select_pat 1"
-    $v add radiobutton -label 0121 -command "select_pat 2"
-    $v add radiobutton -label 0213 -command "select_pat 3"
-    $v add radiobutton -label 0314 -command "select_pat 4"
-    $v add radiobutton -label 0321 -command "select_pat 5"
-    
-    scale $w1.transca -from -12 -to 12 -variable trainer(transpose)\
-            -length 128 -orient hor -width 10
-    if {$trainer(exercise) == "sofasing"} {select_clef $trainer(clefcode)}
+
     
     grid $w.nnotes $w.nnotesca
     grid $w.pitch $w.pitchsca $w.pitchval
@@ -2226,9 +2203,6 @@ proc make_config_sofa {} {
     grid $w.instrlab $w.instrbut
     grid $w.vellab $w.velsca
     grid $w.notedurlab $w.notedursca
-    grid $w1.clef $w1.clefbutton
-    grid $w1.transpose $w1.transca
-    grid $w1.pat $w1.pattern
 }
 
 proc make_config_sofa_id {} {
@@ -2263,7 +2237,9 @@ proc make_config_sofa_id {} {
 
 proc make_config_sofasing {} {
 global lang trainer
+global patches
 set w .config.sofasing
+
 frame $w
 label $w.nnotes -text $lang(nnotes)
 scale $w.nnotesca -from 1 -to 16 -variable trainer(sofa_notes)\
@@ -2290,6 +2266,8 @@ menu $v -tearoff 0
   $v add radiobutton -label $lang(alto) -command "select_clef 1"
   $v add radiobutton -label $lang(bass) -command "select_clef 2"
 grid  $w.clef $w.clefbutton 
+ 
+eval menubutton $w.pattern -menu $w.pattern.menu -text 0213
     set v $w.pattern.menu
     menu $v -tearoff 0
     $v add radiobutton -label 0123 -command "select_pat 0"
@@ -2298,9 +2276,10 @@ grid  $w.clef $w.clefbutton
     $v add radiobutton -label 0213 -command "select_pat 3"
     $v add radiobutton -label 0314 -command "select_pat 4"
     $v add radiobutton -label 0321 -command "select_pat 5"
-grid $w.pat $w.pattern
+label $w.patternlab -text "pattern"
+grid $w.patternlab $w.pattern 
 label $w.transpose -text $lang(transpose)
-scale $w.transca -from -12 -to 12 -variable trainer(transpose)\
+scale $w.transca -from -12 -to 12 -variable trainer(transpose) -orient hor -width 10
 grid $w.transpose $w.transca
 }
 
@@ -2309,10 +2288,10 @@ global lang trainer
 global patches
 set w .config.notate
 frame $w
-label $w.nnotes -text $lang(nnotes)
-scale $w.nnotesca -from 1 -to 10 -variable trainer(sofa_notes)\
+#label $w.nnotes -text $lang(nnotes)
+#scale $w.nnotesca -from 1 -to 10 -variable trainer(sofa_notes)\
         -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
-grid $w.nnotes $w.nnotesca
+#grid $w.nnotes $w.nnotesca
 #label $w.instrlab -text $lang(instrument)
 #button $w.instrbut -text $patches($trainer(instrument)) \
 #        -pady 2 -command sofa_id_prog_dialog
@@ -2349,6 +2328,8 @@ grid  $w.clef $w.clefbutton
 radiobutton $w.usesharps -text "use sharps" -value 0 -variable trainer(keysf)
 radiobutton $w.useflats -text "use flats" -value -1 -variable trainer(keysf)
 grid $w.useflats $w.usesharps
+checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
+grid $w.autonew
 }
 
 
@@ -5681,16 +5662,16 @@ proc test_noteid {} {
     global notelist
     clear_sofa_answer
     .doraysing.msg config -text ""
-    set width [expr $trainer(sofa_notes)*20+70]
+    #set width [expr $trainer(sofa_notes)*20+70]
+    set width 120
     .doraysing.c configure  -width $width
     set clefcode $trainer(clefcode)
-    set seq [makemidiseq $trainer(sofa_notes)]
+    #set seq [makemidiseq $trainer(sofa_notes)]
+    set seq [makemidiseq 1]
     set notelist [midiseq2notelist_chromatic $seq]
-    #puts "notelist = $notelist"
     notelist_interface
     notate_sofa 48 $trainer(clefcode)
     update
-    #playsofa_action_1 [expr $trainer(sofa_tonic) + $trainer(transpose)]
 }
 
   
@@ -6595,6 +6576,7 @@ proc notate_sofa {root clefcode} {
     
     set width [expr $trainer(sofa_notes)*20+70]
     canvas_redraw .doraysing.c $width
+    if {$clefcode < 0} {set clefcode 0}
     put_clef $clefcode .doraysing.c
     key_signature $sf 0 30 $clefcode .doraysing.c
     #puts $notelist
@@ -8638,18 +8620,30 @@ for {set j $trainer(minpitch)} {$j <= $trainer(maxpitch)} {incr j} {
   set k [expr $m % 6]
   set i [expr $m / 6]
   if {[winfo exists $f.$j]} {destroy $f.$j}
-  button $f.$j -text $note -command "notelist_response $j"
+  button $f.$j -text $note -command "verify_note $j"
   grid $f.$j -row $i -column $k
   incr m
   }
 update
 }
 
-proc notelist_response {p} {
+proc verify_note {p} {
 global nresponse
-set note [midi2note $p 0]
-lappend nresponse $note
+global notelist
+global trainer
+set note [midi2notename $p]
+set nresponse $note
 .notebuttons.t.l configure -text $nresponse
+if {[lindex $notelist 0] == $nresponse} {
+  .doraysing.msg configure -text correct
+  update
+  if {$trainer(autonew)} {
+        after $trainer(autonewdelay)
+        next_test
+       } 
+  } else {
+  .doraysing.msg configure -text "should be [lindex $notelist 0]"
+  }
 }
 
 set error_return [catch {muzic::init} errmsg]
