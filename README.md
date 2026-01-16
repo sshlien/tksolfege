@@ -19,7 +19,8 @@ Detailed description of the program is found
 The source code requires a recent version of the tcl/tk 8.5 or 8.6 interpreter
 in order to run. Tcl/tk is usually available with Posix (Linux) systems and
 can installed for free on Windows operating systems from
-<https://www.activestate.com/products/tcl/downloads/>. In addition, you will
+ <a href="https://sourceforge.net/projects/magicsplat/files/magicsplat-tcl/">https://sourceforge.net/projects/magicsplat/files/magicsplat-tcl/</a>.
+In addition, you will
 need an executable of [fluidsynth version 2](http://www.fluidsynth.org/) which
 is available for all platforms, and a soundfont file like TimGM6mb.sf2.
 
