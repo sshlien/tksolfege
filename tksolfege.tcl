@@ -96,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "2.00 2026-01-15 16.38"
+set tksolfegeversion "2.00 2026-01-17 20.35"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -1426,7 +1426,7 @@ $v add radiobutton -label "randomly generated"\
 
 proc select_noteid_lesson {lesson} {
 global trainer
-puts "select_noteid_lesson $lesson"
+#puts "select_noteid_lesson $lesson"
 set midipitchbot [list 62 76 50 46 54 30]
 switch $lesson {
   treble {set i 0}
@@ -1442,6 +1442,7 @@ if {$i > 2} {set trainer(clefcode) 2
  } else {
         set trainer(clefcode) 0
         }
+notelist_interface
 #puts "pitch range $trainer(minpitch) $trainer(maxpitch)"
 }
 
@@ -1555,6 +1556,7 @@ proc setup_exercise_interface {exercise} {
     pack forget .drumseq
     #pack forget .pr
     pack forget .proginterface
+    destroy .notebuttons
 
     destroy .msg
     grid forget .f.response .f.submit .f.musicscale
@@ -1747,6 +1749,7 @@ proc setup_exercise_interface {exercise} {
         pack .f -side left
         pack .doraysing -side right
         .f.ans configure -text $lang($trainer(exercise))
+        .f.lessmenu configure -menu .f.lessmenu.noteid
         #switch_sofa_lesson_menu
         test_noteid
         set nrepeats 0}
@@ -3733,15 +3736,15 @@ proc show_interval {troot ttype tdir} {
 }
 
 proc draw_interval {note1 note2 clefcode} {
-    set chordsym ""
+set chordsym ""
 if {![winfo exist .s]} {
     frame .s
     canvas .s.c -width 140 -height 140
-    pack .s.c -anchor nw
-    pack .s -side top -anchor nw
  }
-    grand_canvas_redraw .s.c 130
-    show_chord_in_grand_staff "$note1 $note2"
+pack .s.c -anchor nw
+pack .s -side top -anchor nw
+grand_canvas_redraw .s.c 130
+show_chord_in_grand_staff "$note1 $note2"
 }
 
 proc shift_note {note shift} {
