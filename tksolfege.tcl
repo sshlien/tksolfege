@@ -96,7 +96,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "2.00 2026-01-17 20.35"
+set tksolfegeversion "2.01 2026-01-30 11:30"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -157,6 +157,7 @@ array set lang {
     instrument {instrument}
     idkeysig {key signature identification}
     idscales {scale identification}
+    keyboard {keyboard}
     language {language}
     leader {count in}
     lesson	{lesson}
@@ -643,6 +644,7 @@ set trainer(rres) 4
 set trainer(rarrg) 0
 set trainer(rndrums) 3
 set trainer(rrepeats) 2
+set trainer(keyboard) 0
 
 
 #window geometry
@@ -744,6 +746,7 @@ proc write_ini_file {filename} {
     puts $handle "proglesson $trainer(proglesson)"
     puts $handle "browser $trainer(browser)"
     puts $handle "shiftedchord $trainer(shiftedchord)"
+    puts $handle "keyboard $trainer(keyboard)"
     puts $handle ". $trainer(.)"
     puts $handle ".config $trainer(.config)"
     puts $handle ".ownlesson $trainer(.ownlesson)"
@@ -1244,6 +1247,18 @@ proc make_interface {} {
     $v add radiobutton -label "maj/min/aug/dim and their 7ths" -command "select_diatonic_lesson 7"
     $v add radiobutton -label $lang(yourown) -command config_your_own_diatonic_lesson
     
+    # figbass chords
+    set v .f.lessmenu.figbasschords
+    menu $v -tearoff 0
+    $v add radiobutton -label "triads only" -command "select_figbass_lesson 0"
+    $v add radiobutton -label "major/minor and first inversion" -command "select_figbass_lesson 1"
+    $v add radiobutton -label "major/minor  and 2nd inversion" -command "select_figbass_lesson 2"
+    $v add radiobutton -label "major/minor and their inversions" -command "select_figbass_lesson 4"
+    $v add radiobutton -label "triads and their inversions" -command "select_figbass_lesson 5"
+    $v add radiobutton -label "major/minor and their 7ths" -command "select_figbass_lesson 6"
+    $v add radiobutton -label "aug dim and 1st inversion" -command "select_figbass_lesson 7"
+    $v add radiobutton -label "maj/min/aug/dim and their 7ths" -command "select_diatonic_lesson 7"
+    $v add radiobutton -label $lang(yourown) -command config_your_own_figbass_lesson
     
     
     set v .f.lessmenu.intervals
@@ -1804,7 +1819,7 @@ proc setup_exercise_interface {exercise} {
         label .s.l  -text ""
         pack .s.c .s.l
         .f.ans configure -text $lang(idfigbas)
-        .f.lessmenu configure -menu .f.lessmenu.diatonicchords
+        .f.lessmenu configure -menu .f.lessmenu.figbasschords
         activate_mode_keysig
         activate_cmplx_checkbutton 
         initialize_scalenotelist
@@ -2295,18 +2310,18 @@ frame $w
 #scale $w.nnotesca -from 1 -to 10 -variable trainer(sofa_notes)\
         -length 128 -orient hor -width 10 -command reset_rhythm_melody_stats
 #grid $w.nnotes $w.nnotesca
-#label $w.instrlab -text $lang(instrument)
-#button $w.instrbut -text $patches($trainer(instrument)) \
-#        -pady 2 -command sofa_id_prog_dialog
-#grid $w.instrlab $w.instrbut
-#label $w.vellab -text $lang(velocity)
-#scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
-#        -length 128 -orient hor -width 10
-#grid $w.vellab $w.velsca
-#label $w.notedurlab -text $lang(duration)
-#scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
-#        -length 128 -orient hor -width 10
-#grid $w.notedurlab $w.notedursca
+label $w.instrlab -text $lang(instrument)
+button $w.instrbut -text $patches($trainer(instrument)) \
+        -pady 2 -command sofa_id_prog_dialog
+grid $w.instrlab $w.instrbut
+label $w.vellab -text $lang(velocity)
+scale $w.velsca -from 0 -to 100 -variable trainer(velocity)\
+        -length 128 -orient hor -width 10
+grid $w.vellab $w.velsca
+label $w.notedurlab -text $lang(duration)
+scale $w.notedursca -from 100 -to 1500 -variable trainer(msec)\
+        -length 128 -orient hor -width 10
+grid $w.notedurlab $w.notedursca
 label $w.lowpitchlab -text $lang(lowest)
 set lowpitch [midi2notename $trainer(minpitch)]
 label $w.lowpitchname -text $lowpitch -width 3
@@ -2331,6 +2346,9 @@ grid  $w.clef $w.clefbutton
 radiobutton $w.usesharps -text "use sharps" -value 0 -variable trainer(keysf)
 radiobutton $w.useflats -text "use flats" -value -1 -variable trainer(keysf)
 grid $w.useflats $w.usesharps
+radiobutton $w.uselist -text "use note list" -value 0 -variable trainer(keyboard)
+radiobutton $w.usekeyboard -text "use keyboard" -value -1 -variable trainer(keyboard)
+grid $w.uselist $w.usekeyboard
 checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
 grid $w.autonew
 }
@@ -2493,6 +2511,9 @@ proc change_range {dummy} {
     set trainer(range) [expr $trainer(maxpitch) - $trainer(minpitch)]
     .config.main.lowpitchname config -text [midi2notename $trainer(minpitch)]
     .config.main.highpitchname config -text [midi2notename $trainer(maxpitch)]
+    if {[winfo exist .piano]} {
+       keyboard [midi2notename $trainer(minpitch)] [midi2notename $trainer(maxpitch)]
+       }
 }
 
 
@@ -2525,27 +2546,35 @@ proc select_chord_lesson {num} {
 }
 
 
+
 proc select_diatonic_lesson {num} {
     global diatoniclesson
     global trainer
     clear_own_diatonic_lessons 
-    foreach type $trainer(chordtypes) {
-        grid forget .w.$type }
-    set trainer(chordtypes) $diatoniclesson($num)
-    set n [llength $trainer(chordtypes)]
-    set m [expr $n/2]
-    if {[expr $n % 2] == 1} {incr m}
-    set i 0
-    foreach type $trainer(chordtypes) {
+    if {$trainer(exercise) != "idfigbas"} {
+      foreach type $trainer(chordtypes) {
+          grid forget .w.$type }
+      set trainer(chordtypes) $diatoniclesson($num)
+      set n [llength $trainer(chordtypes)]
+      set m [expr $n/2]
+      if {[expr $n % 2] == 1} {incr m}
+      set i 0
+      foreach type $trainer(chordtypes) {
         set row [expr $i % $m]
         set col [expr $i / $m]
         grid .w.$type -row $row -column $col
         incr i
+      }
     }
     zero_chord_confusion_matrix
     if {[winfo exist .stats]} {make_stats_window}
 }
 
+proc select_figbass_lesson {num} {
+   global trainer
+   zero_figbass_confusion_matrix
+   if {[winfo exist .stats]} {make_stats_window}
+}
 
 proc select_interval_lesson {num} {
     global intervallesson
@@ -3575,7 +3604,7 @@ proc next_test {} {
         sofabadnote {test_sofabadnote 0}
 	keysigid {test_keysig}
 	scalesid {test_scalesid}
-	idfigbas {test_chord}
+	idfigbas {test_idfigbas}
 	idcad {test_cadence}
 	drumseq {test_drumseq}
         prog {test_progression}
@@ -3621,6 +3650,28 @@ proc test_chord {} {
         show_testchord}
     if {$trainer(testmode) == "aural" || $trainer(testmode) == "both"} {
         playchord $chordseq  $trainer(playmode)}
+    set test_time [clock seconds]
+}
+
+proc test_idfigbas {} {
+    global troot ttype
+    global trainer
+    global try test_time ntrials
+    global chordseq
+    set trial [pick_chord]
+    set troot [lindex $trial 0]
+    set ttype [lindex $trial 1]
+    set try 0
+    set chordseq [make_chordlist $troot $ttype]
+    if {$trainer(xchord)} {
+          set chordseq [chord_spreader $chordseq]}
+    #pack forget .s
+    .f.ans configure -text ""
+    update
+    if {$trainer(testmode) == "visual" || $trainer(testmode) == "both"} {
+        show_testchord}
+    #if {$trainer(testmode) == "aural" || $trainer(testmode) == "both"} {
+    #    playchord $chordseq  $trainer(playmode)}
     set test_time [clock seconds]
 }
 
@@ -3771,27 +3822,11 @@ proc shift_note {note shift} {
 }
 
 proc notedifference {note1 note2} {
-    global reversenotearray
-    #puts "note1 note2 $note1 $note2"
-    if {[string length $note1] > 2} {
-        set bnote1 [string range $note1 0 1]
-        set oct1 [string index $note1 2]
-    } else {
-        set bnote1 [string index $note1 0]
-        set oct1 [string index $note1 1]
-    }
-    
-    if {[string length $note2] > 2} {
-        set bnote2 [string range $note2 0 1]
-        set oct2 [string index $note2 2]
-    } else {
-        set bnote2 [string index $note2 0]
-        set oct2 [string index $note2 1]
-    }
-    set semi1 [expr $reversenotearray($bnote1) + 12*($oct1+1)]
-    set semi2 [expr $reversenotearray($bnote2) + 12*($oct2+1)]
-    #puts "midi $semi1 $semi2"
-    return [expr $semi1 - $semi2]
+set semi1 [noteOctave2midi $note1]
+set semi2 [noteOctave2midi $note2]
+set dif [expr $semi1 - $semi2]
+#puts "notedifference $note1 $note2 = $dif"
+return $dif
 }
 
 # end of show_testintv.tcl
@@ -3895,7 +3930,8 @@ proc playchord_action_with_keyboard {chordseq mode} {
     global starkitversion
     global midi2id
     global id2shade
-    if {![winfo exists .piano]} keyboard
+    #if {![winfo exists .piano]} [keyboard C3 A5]
+    keyboard C3 A5
     muzic::channel 0 $trainer(instrument)
     if {[string equal $trainer(direction) down]} {
         set chordseq [reverselist $chordseq]}
@@ -3921,8 +3957,10 @@ proc playchord_action_with_keyboard {chordseq mode} {
         } else {
         foreach note $chordseq {
           set k $note
-          set id $midi2id($k)
-          .piano.c itemconfigure $id -fill red
+          if {[info exists midi2id($k)]} {
+            set id $midi2id($k)
+            .piano.c itemconfigure $id -fill red
+            }
           }
           update
 
@@ -3930,8 +3968,10 @@ proc playchord_action_with_keyboard {chordseq mode} {
 
         foreach note $chordseq {
           set k $note
-          set id $midi2id($k)
-          .piano.c itemconfigure $id -fill $id2shade($id)
+          if {[info exists midi2id($k)]} {
+            set id $midi2id($k)
+            .piano.c itemconfigure $id -fill $id2shade($id)
+            }
           }
           update
         }
@@ -6203,6 +6243,34 @@ proc note2midi {note} {
     return $reversenotearray($note)
 }
 
+proc noteOctave2midi {note} {
+    global reversenotearray
+    if {[string length $note] > 2} {
+        set bnote [string range $note 0 1]
+        set oct [string index $note 2]
+    } else {
+        set bnote [string index $note 0]
+        set oct [string index $note 1]
+    }
+# octaves were starting from zero instead of 1
+    incr oct
+    return [expr $reversenotearray($bnote) + 12*$oct]
+}
+
+proc noteposition {note} {
+# returns the white key position of the note
+    global reversenotearray
+    set notelist CDEFGAB
+    if {[string length $note] > 2} {
+        set oct [string index $note 2]
+    } else {
+        set oct [string index $note 1]
+    }
+    set whitekeynumber [string first [string index $note 0] $notelist]
+    return [expr $whitekeynumber + $oct*7]
+    }
+
+
 proc setup_midi_note_translator {root} {
     # sets up the translator from MIDI pitch notation to
     # note name notation. Based on the tonic of the
@@ -6798,6 +6866,7 @@ proc show_testchord {} {
     .s.l configure -text [translate_chord $testchord]
     set testchord [propagate_accidentals $testchord]
     show_chord_in_grand_staff $testchord
+    update
 }
 
 proc translate_chord {chord} {
@@ -8514,20 +8583,35 @@ place_progressions_buttons
 #Part 39.0
 # Piano keyboard
 
-proc keyboard {} {
-toplevel .piano
-positionWindow .piano
-canvas .piano.c -width 660 -height 80
-set midipitch 24 
+
+proc keyboard {startnote endnote} {
+global trainer
+if {!$trainer(keyboard)} return
+set s [string index $startnote 0]
+set istart [string first $s "CDEFGAB"]
+set midipitch [noteOctave2midi $startnote]
+#puts "starting pitch = $midipitch for $startnote"
+set npitches [expr [noteOctave2midi $endnote] - $midipitch + $istart]
+set nnotes [expr  [noteposition $endnote] - [noteposition $startnote]]
+#puts "$startnote $endnote $nnotes"
+#puts "noteposition $endnote  at [noteposition $endnote]"
+#puts "noteposition $startnote  at [noteposition $startnote]"
+set width [expr $nnotes * 17 + 34]
+if {![winfo exist .piano]} {toplevel .piano
+                   positionWindow .piano
+                   canvas .piano.c -width $width -height 80
+                   }
 set k .piano.c
+$k delete all
 pack $k
 set leftkey "5 0 5 30 0 30 0 50 17 50 17 0"
 set rightkey "0 0 0 50 17 50 17 30 12 30 12 0"
 set middlekey "0 0 0 50 17 50 17 0"
 set blackkey "0 0 0 30 8 30 8 0"
-for {set i 0} {$i < 36} {incr i} {
+set ix 10
+for {set i $istart} {$i < [expr $istart+$nnotes]} {incr i} {
   set j [expr $i % 7]
-  set ix [expr $i*17 + 1]
+  #set ix [expr $i*17 + 1]
   switch $j {
     0 -
     3 {
@@ -8548,6 +8632,7 @@ for {set i 0} {$i < 36} {incr i} {
       set midipitch [drawkey $ix $middlekey beige $midipitch]
       }
     }
+  incr ix 17
   }
 update
 }
@@ -8572,11 +8657,12 @@ global id2midi
 global id2shade
 global trainer
 set pitch $id2midi($item)
-#puts "pianoclicked $item $pitch"
+puts "pianoclicked $item $pitch"
 .piano.c itemconfigure $item -fill red
 update
 muzic::playnote 0 $pitch $trainer(velocity) $trainer(msec)
 .piano.c itemconfigure $item -fill $id2shade($item)
+if {$trainer(exercise) == "noteid"} {verify_note $pitch}
 }
 
 
@@ -8597,7 +8683,7 @@ foreach pitch $midipitches {
  }
 }
 
-#keyboard
+#keyboard B2 C4
 #playkeyboard {25 26 27 30 42}
    
 proc notelist_interface {} {
@@ -8628,6 +8714,9 @@ for {set j $trainer(minpitch)} {$j <= $trainer(maxpitch)} {incr j} {
   incr m
   }
 update
+set lownote [midi2notename $trainer(minpitch)]
+set hinote [midi2notename $trainer(maxpitch)]
+keyboard $lownote $hinote
 }
 
 proc verify_note {p} {
@@ -8638,7 +8727,7 @@ set note [midi2notename $p]
 set nresponse $note
 .notebuttons.t.l configure -text $nresponse
 if {[lindex $notelist 0] == $nresponse} {
-  .doraysing.msg configure -text correct
+  .doraysing.msg configure -text "$p $note correct"
   update
   if {$trainer(autonew)} {
         after $trainer(autonewdelay)
@@ -8647,6 +8736,7 @@ if {[lindex $notelist 0] == $nresponse} {
   } else {
   .doraysing.msg configure -text "should be [lindex $notelist 0]"
   }
+  muzic::playnote 0 $p $trainer(velocity) $trainer(msec) 
 }
 
 set error_return [catch {muzic::init} errmsg]
@@ -8654,7 +8744,6 @@ if {$error_return} {
   tk_messageBox -type ok -icon error -message $errmsg
   exit
   }
-
 
 bind . <a> {advance_settings_config}
 
