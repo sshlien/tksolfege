@@ -1,4 +1,3 @@
-#package provide app-tksolfege 1.0
 #!/bin/sh
 #next lines restarts using wish \
 exec wish "$0" "$@"
@@ -96,7 +95,7 @@ wm protocol . WM_DELETE_WINDOW {
 option add *Font {Arial 10 bold}
 
 
-set tksolfegeversion "2.01 2026-01-30 11:30"
+set tksolfegeversion "2.02 2026-02-03 12:29"
 set tksolfege_title "tksolfege $tksolfegeversion"
 wm title . $tksolfege_title
 
@@ -1442,7 +1441,7 @@ $v add radiobutton -label "randomly generated"\
 proc select_noteid_lesson {lesson} {
 global trainer
 #puts "select_noteid_lesson $lesson"
-set midipitchbot [list 62 76 50 46 54 30]
+set midipitchbot [list 62 76 50 47 57 31]
 switch $lesson {
   treble {set i 0}
   treble+ {set i 1}
@@ -1457,8 +1456,11 @@ if {$i > 2} {set trainer(clefcode) 2
  } else {
         set trainer(clefcode) 0
         }
-notelist_interface
-#puts "pitch range $trainer(minpitch) $trainer(maxpitch)"
+if {!$trainer(keyboard)} {
+         notebuttons_array
+      } else {
+        notelist_keyboard
+        }
 }
 
 
@@ -1556,6 +1558,7 @@ proc setup_exercise_interface {exercise} {
     set trainer(exercise) $exercise
     if {[winfo exist .config]} {switch_config_sheet}
     
+    destroy .piano
     destroy .s
     pack forget .w
     pack forget .b
@@ -2346,14 +2349,32 @@ grid  $w.clef $w.clefbutton
 radiobutton $w.usesharps -text "use sharps" -value 0 -variable trainer(keysf)
 radiobutton $w.useflats -text "use flats" -value -1 -variable trainer(keysf)
 grid $w.useflats $w.usesharps
-radiobutton $w.uselist -text "use note list" -value 0 -variable trainer(keyboard)
-radiobutton $w.usekeyboard -text "use keyboard" -value -1 -variable trainer(keyboard)
+radiobutton $w.uselist -text "use note list" -value 0 -variable trainer(keyboard) -command use_note_array
+radiobutton $w.usekeyboard -text "use keyboard" -value -1 -variable trainer(keyboard) -command use_keyboard
 grid $w.uselist $w.usekeyboard
 checkbutton $w.autonew -variable trainer(autonew) -text $lang(auton)
 grid $w.autonew
 }
 
+proc use_note_array {} {
+global trainer
+destroy .piano
+if {!$trainer(keyboard)} {
+       notebuttons_array
+   } else {
+   notelist_keyboard
+   }
+}
 
+proc use_keyboard {} {
+global trainer
+destroy .notebuttons
+if {!$trainer(keyboard)} {
+       notebuttons_array
+   } else {
+   notelist_keyboard
+   }
+}
 
 
 
@@ -2921,6 +2942,7 @@ proc make_stats_window {} {
     grid .stats.m
     display_empty_stats
     switch $trainer(exercise) {
+       "noteid" {display_noteid_stats}
        "chords" -
        "chordsdia" {display_chord_stats}
        "intervals" {display_interval_stats}
@@ -5703,6 +5725,7 @@ proc test_noteid {} {
     global melodylist
     global trainer
     global notelist
+    global ntrials ncorrect
     clear_sofa_answer
     .doraysing.msg config -text ""
     #set width [expr $trainer(sofa_notes)*20+70]
@@ -5712,9 +5735,14 @@ proc test_noteid {} {
     #set seq [makemidiseq $trainer(sofa_notes)]
     set seq [makemidiseq 1]
     set notelist [midiseq2notelist_chromatic $seq]
-    notelist_interface
+    if {!$trainer(keyboard)} {
+         notebuttons_array
+      } else {
+        notelist_keyboard
+        }
     notate_sofa 48 $trainer(clefcode)
     update
+    incr ntrials
 }
 
   
@@ -7397,6 +7425,18 @@ proc display_keysig_stats {} {
     } else {.stats.results configure -text $outstr}
 }
 
+proc display_noteid_stats {} {
+    global ncorrect ntrials
+    if {$ntrials < 1} return
+    set accuracy [expr 100.0*$ncorrect/double($ntrials)]
+    set accuracy [format "%5.2f" $accuracy]
+    set outstr [format "accuracy %5.2f percent for %d trials" $accuracy $ntrials]
+    if {![winfo exist .stats.results]} {
+        label .stats.results -text $outstr
+        grid .stats.results
+    } else {.stats.results configure -text $outstr}
+}
+
 proc config_your_own_keysig {} {
     global keysigsel lang
     if {[winfo exist .ownlesson]} {
@@ -8586,24 +8626,27 @@ place_progressions_buttons
 
 proc keyboard {startnote endnote} {
 global trainer
-if {!$trainer(keyboard)} return
+#if {!$trainer(keyboard)} return
 set s [string index $startnote 0]
 set istart [string first $s "CDEFGAB"]
 set midipitch [noteOctave2midi $startnote]
 #puts "starting pitch = $midipitch for $startnote"
 set npitches [expr [noteOctave2midi $endnote] - $midipitch + $istart]
-set nnotes [expr  [noteposition $endnote] - [noteposition $startnote]]
+set nnotes [expr 1 + [noteposition $endnote] - [noteposition $startnote]]
 #puts "$startnote $endnote $nnotes"
 #puts "noteposition $endnote  at [noteposition $endnote]"
 #puts "noteposition $startnote  at [noteposition $startnote]"
 set width [expr $nnotes * 17 + 34]
 if {![winfo exist .piano]} {toplevel .piano
                    positionWindow .piano
-                   canvas .piano.c -width $width -height 80
+                   canvas .piano.c -width $width -height 55
+                   label .piano.msg -text ""
+              
                    }
 set k .piano.c
 $k delete all
 pack $k
+pack .piano.msg
 set leftkey "5 0 5 30 0 30 0 50 17 50 17 0"
 set rightkey "0 0 0 50 17 50 17 30 12 30 12 0"
 set middlekey "0 0 0 50 17 50 17 0"
@@ -8646,7 +8689,7 @@ set id [.piano.c create polygon $key -fill $shade -outline black]
 set midi2id($midipitch) $id
 set id2midi($id) $midipitch
 set id2shade($id) $shade
-#puts "id=$id key=$key midipitch=$midipitch"
+#puts "id=$id key=$key midipitch=$midipitch shade=$shade"
 incr midipitch
 .piano.c bind $id <Button-1> "pianoclicked $id"
 return $midipitch
@@ -8657,10 +8700,10 @@ global id2midi
 global id2shade
 global trainer
 set pitch $id2midi($item)
-puts "pianoclicked $item $pitch"
+#puts "pianoclicked $item $pitch"
 .piano.c itemconfigure $item -fill red
 update
-muzic::playnote 0 $pitch $trainer(velocity) $trainer(msec)
+#muzic::playnote 0 $pitch $trainer(velocity) $trainer(msec)
 .piano.c itemconfigure $item -fill $id2shade($item)
 if {$trainer(exercise) == "noteid"} {verify_note $pitch}
 }
@@ -8686,7 +8729,7 @@ foreach pitch $midipitches {
 #keyboard B2 C4
 #playkeyboard {25 26 27 30 42}
    
-proc notelist_interface {} {
+proc notebuttons_array {} {
 global trainer
 global nresponse
 set f .notebuttons.f
@@ -8714,6 +8757,11 @@ for {set j $trainer(minpitch)} {$j <= $trainer(maxpitch)} {incr j} {
   incr m
   }
 update
+if {$trainer(keyboard)} notelist_keyboard
+}
+
+proc notelist_keyboard {} {
+global trainer
 set lownote [midi2notename $trainer(minpitch)]
 set hinote [midi2notename $trainer(maxpitch)]
 keyboard $lownote $hinote
@@ -8723,11 +8771,13 @@ proc verify_note {p} {
 global nresponse
 global notelist
 global trainer
+global ntrials ncorrect
 set note [midi2notename $p]
 set nresponse $note
-.notebuttons.t.l configure -text $nresponse
+#.notebuttons.t.l configure -text $nresponse
 if {[lindex $notelist 0] == $nresponse} {
   .doraysing.msg configure -text "$p $note correct"
+  incr ncorrect
   update
   if {$trainer(autonew)} {
         after $trainer(autonewdelay)
@@ -8737,6 +8787,7 @@ if {[lindex $notelist 0] == $nresponse} {
   .doraysing.msg configure -text "should be [lindex $notelist 0]"
   }
   muzic::playnote 0 $p $trainer(velocity) $trainer(msec) 
+  .piano.msg configure -text "$p $note"
 }
 
 set error_return [catch {muzic::init} errmsg]
